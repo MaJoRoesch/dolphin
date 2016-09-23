@@ -18,15 +18,15 @@
 
 Name:       dolphin-emu
 Summary:    Dolphin Emulator
-Version:    4.0.2
+Version:    5.0
 Release:    0%{?dist}
 Group:      System/Emulators/Other
 License:    GPL-2.0
-URL:        http://www.dolphin-emu.org/
+URL:        https://dolphin-emu.org/
 BuildArch:  x86_64 armv7l aarch64
 
 # For this spec file to work, the Dolphin Emulator sources must be located
-# in a directory named dolphin-emu-4.0 (with "4.0" being the version
+# in a directory named dolphin-emu-5.0 (with "5.0" being the version
 # number defined above).
 # If the sources are compressed in another format than .tar.xz, change the
 # file extension accordingly.
@@ -56,7 +56,8 @@ BuildRequires:  lzo-devel
 # Disable miniupnpc in OBS for F20
 BuildRequires:  miniupnpc-devel
 BuildRequires:  openal-soft-devel
-BuildRequires:  polarssl-devel
+#polarssl is now mbedtls:
+BuildRequires:  mbedtls-devel
 BuildRequires:  portaudio-devel
 BuildRequires:  SDL2-devel
 BuildRequires:  SFML-devel
@@ -102,6 +103,18 @@ Translations into various languages for Dolphin Emulator
 
 # ------------------------------------------------------
 
+%package nogui
+Summary:        Dolphin Emulator without a graphical user interface
+
+%description nogui
+Dolphin Emulator without a graphical user interface
+
+%files nogui
+%{_bindir}/%{name}-nogui
+%{_mandir}/man6/%{name}-nogui.*
+
+# ------------------------------------------------------
+
 %prep
 %setup -q
 
@@ -125,8 +138,10 @@ make %{?_smp_mflags} install DESTDIR="%{?buildroot}"
 %doc license.txt Readme.md
 %{_bindir}/%{name}
 %{_datadir}/%{name}
-%{_datadir}/pixmaps/dolphin-emu.xpm
+%{_datadir}/icons/hicolor/48x48/apps/%{name}.*
+%{_datadir}/icons/hicolor/scalable/apps/%{name}.*
 %{_datadir}/applications/%{name}.desktop
+%{_mandir}/man6/%{name}.*
 
 %clean
 rm -rf %{buildroot}

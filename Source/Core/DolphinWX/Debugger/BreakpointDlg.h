@@ -1,11 +1,10 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
 #include <wx/dialog.h>
-#include <wx/event.h>
 
 class CBreakPointWindow;
 class wxTextCtrl;
@@ -13,13 +12,11 @@ class wxTextCtrl;
 class BreakPointDlg : public wxDialog
 {
 public:
-	BreakPointDlg(CBreakPointWindow *_Parent);
+  BreakPointDlg(CBreakPointWindow* _Parent);
 
 private:
-	CBreakPointWindow *Parent;
-	wxTextCtrl *m_pEditAddress;
+  CBreakPointWindow* Parent;
+  wxTextCtrl* m_pEditAddress;
 
-	void OnOK(wxCommandEvent& event);
-
-	DECLARE_EVENT_TABLE();
+  void OnOK(wxCommandEvent& event);
 };

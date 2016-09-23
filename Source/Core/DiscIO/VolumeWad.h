@@ -1,9 +1,10 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,35 +18,43 @@
 
 namespace DiscIO
 {
-
-class IBlobReader;
+enum class BlobType;
+enum class Country;
+enum class Language;
+enum class Platform;
 
 class CVolumeWAD : public IVolume
 {
 public:
-	CVolumeWAD(IBlobReader* _pReader);
-	~CVolumeWAD();
-	bool Read(u64 _Offset, u64 _Length, u8* _pBuffer) const override;
-	bool RAWRead(u64 _Offset, u64 _Length, u8* _pBuffer) const override { return false; }
-	bool GetTitleID(u8* _pBuffer) const override;
-	std::string GetUniqueID() const override;
-	std::string GetMakerID() const override;
-	std::vector<std::string> GetNames() const override;
-	u32 GetFSTSize() const override               { return 0; }
-	std::string GetApploaderDate() const override { return "0"; }
-	ECountry GetCountry() const override;
-	u64 GetSize() const override;
-	u64 GetRawSize() const override;
+  CVolumeWAD(std::unique_ptr<IBlobReader> reader);
+  ~CVolumeWAD();
+  bool Read(u64 _Offset, u64 _Length, u8* _pBuffer, bool decrypt = false) const override;
+  bool GetTitleID(u64* buffer) const override;
+  std::string GetUniqueID() const override;
+  std::string GetMakerID() const override;
+  u16 GetRevision() const override;
+  std::string GetInternalName() const override { return ""; }
+  std::map<Language, std::string> GetLongNames() const override;
+  std::vector<u32> GetBanner(int* width, int* height) const override;
+  u64 GetFSTSize() const override { return 0; }
+  std::string GetApploaderDate() const override { return ""; }
+  Platform GetVolumeType() const override;
+  Country GetCountry() const override;
+
+  BlobType GetBlobType() const override;
+  u64 GetSize() const override;
+  u64 GetRawSize() const override;
 
 private:
-	std::unique_ptr<IBlobReader> m_pReader;
-	u32 m_opening_bnr_offset;
-	u32 m_hdr_size;
-	u32 m_cert_size;
-	u32 m_tick_size;
-	u32 m_tmd_size;
-	u32 m_data_size;
-	u8 m_Country;
+  std::unique_ptr<IBlobReader> m_pReader;
+  u32 m_offset;
+  u32 m_tmd_offset;
+  u32 m_opening_bnr_offset;
+  u32 m_hdr_size;
+  u32 m_cert_size;
+  u32 m_tick_size;
+  u32 m_tmd_size;
+  u32 m_data_size;
 };
 
-} // namespace
+}  // namespace

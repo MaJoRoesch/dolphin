@@ -1,5 +1,5 @@
-// Copyright 2014 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2010 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
@@ -8,152 +8,153 @@
 
 #include <SDL.h>
 
-#include "InputCommon/ControllerInterface/Device.h"
-
-
 #if SDL_VERSION_ATLEAST(1, 3, 0)
-	#define USE_SDL_HAPTIC
+#define USE_SDL_HAPTIC
 #endif
 
 #ifdef USE_SDL_HAPTIC
-	#include <SDL_haptic.h>
-	#define SDL_INIT_FLAGS  SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC
-#else
-	#define SDL_INIT_FLAGS  SDL_INIT_JOYSTICK
+#include <SDL_haptic.h>
 #endif
 
 namespace ciface
 {
 namespace SDL
 {
-
-void Init( std::vector<Core::Device*>& devices );
+void Init();
 
 class Joystick : public Core::Device
 {
 private:
+  class Button : public Core::Device::Input
+  {
+  public:
+    std::string GetName() const override;
+    Button(u8 index, SDL_Joystick* js) : m_js(js), m_index(index) {}
+    ControlState GetState() const override;
+
+  private:
+    SDL_Joystick* const m_js;
+    const u8 m_index;
+  };
+
+  class Axis : public Core::Device::Input
+  {
+  public:
+    std::string GetName() const override;
+    Axis(u8 index, SDL_Joystick* js, Sint16 range) : m_js(js), m_range(range), m_index(index) {}
+    ControlState GetState() const override;
+
+  private:
+    SDL_Joystick* const m_js;
+    const Sint16 m_range;
+    const u8 m_index;
+  };
+
+  class Hat : public Input
+  {
+  public:
+    std::string GetName() const override;
+    Hat(u8 index, SDL_Joystick* js, u8 direction) : m_js(js), m_direction(direction), m_index(index)
+    {
+    }
+    ControlState GetState() const override;
+
+  private:
+    SDL_Joystick* const m_js;
+    const u8 m_direction;
+    const u8 m_index;
+  };
 
 #ifdef USE_SDL_HAPTIC
-	struct EffectIDState
-	{
-		EffectIDState() : effect(SDL_HapticEffect()), id(-1), changed(false) {}
+  class HapticEffect : public Output
+  {
+  public:
+    HapticEffect(SDL_Haptic* haptic) : m_haptic(haptic), m_id(-1) {}
+    ~HapticEffect()
+    {
+      m_effect.type = 0;
+      Update();
+    }
 
-		SDL_HapticEffect effect;
-		int              id;
-		bool             changed;
-	};
-#endif
+  protected:
+    void Update();
+    virtual void SetSDLHapticEffect(ControlState state) = 0;
 
-	class Button : public Core::Device::Input
-	{
-	public:
-		std::string GetName() const override;
-		Button(u8 index, SDL_Joystick* js) : m_js(js), m_index(index) {}
-		ControlState GetState() const override;
-	private:
-		 SDL_Joystick* const m_js;
-		 const u8 m_index;
-	};
+    SDL_HapticEffect m_effect;
+    SDL_Haptic* m_haptic;
+    int m_id;
 
-	class Axis : public Core::Device::Input
-	{
-	public:
-		std::string GetName() const override;
-		Axis(u8 index, SDL_Joystick* js, Sint16 range) : m_js(js), m_range(range), m_index(index) {}
-		ControlState GetState() const override;
-	private:
-		SDL_Joystick* const m_js;
-		const Sint16 m_range;
-		const u8 m_index;
-	};
+  private:
+    virtual void SetState(ControlState state) override final;
+  };
 
-	class Hat : public Input
-	{
-	public:
-		std::string GetName() const override;
-		Hat(u8 index, SDL_Joystick* js, u8 direction) : m_js(js), m_direction(direction), m_index(index) {}
-		ControlState GetState() const override;
-	private:
-		SDL_Joystick* const m_js;
-		const u8 m_direction;
-		const u8 m_index;
-	};
+  class ConstantEffect : public HapticEffect
+  {
+  public:
+    ConstantEffect(SDL_Haptic* haptic) : HapticEffect(haptic) {}
+    std::string GetName() const override;
 
-#ifdef USE_SDL_HAPTIC
-	class ConstantEffect : public Output
-	{
-	public:
-		std::string GetName() const override;
-		ConstantEffect(EffectIDState& effect) : m_effect(effect) {}
-		void SetState(ControlState state) override;
-	private:
-		EffectIDState& m_effect;
-	};
+  private:
+    void SetSDLHapticEffect(ControlState state) override;
+  };
 
-	class RampEffect : public Output
-	{
-	public:
-		std::string GetName() const override;
-		RampEffect(EffectIDState& effect) : m_effect(effect) {}
-		void SetState(ControlState state) override;
-	private:
-		EffectIDState& m_effect;
-	};
+  class RampEffect : public HapticEffect
+  {
+  public:
+    RampEffect(SDL_Haptic* haptic) : HapticEffect(haptic) {}
+    std::string GetName() const override;
 
-	class SineEffect : public Output
-	{
-	public:
-		std::string GetName() const override;
-		SineEffect(EffectIDState& effect) : m_effect(effect) {}
-		void SetState(ControlState state) override;
-	private:
-		EffectIDState& m_effect;
-	};
+  private:
+    void SetSDLHapticEffect(ControlState state) override;
+  };
 
-#ifdef SDL_HAPTIC_SQUARE
-	class SquareEffect : public Output
-	{
-	public:
-		std::string GetName() const;
-		SquareEffect(EffectIDState& effect) : m_effect(effect) {}
-		void SetState(ControlState state);
-	private:
-		EffectIDState& m_effect;
-	};
-#endif // defined(SDL_HAPTIC_SQUARE)
+  class SineEffect : public HapticEffect
+  {
+  public:
+    SineEffect(SDL_Haptic* haptic) : HapticEffect(haptic) {}
+    std::string GetName() const override;
 
-	class TriangleEffect : public Output
-	{
-	public:
-		std::string GetName() const override;
-		TriangleEffect(EffectIDState& effect) : m_effect(effect) {}
-		void SetState(ControlState state) override;
-	private:
-		EffectIDState& m_effect;
-	};
+  private:
+    void SetSDLHapticEffect(ControlState state) override;
+  };
+
+  class TriangleEffect : public HapticEffect
+  {
+  public:
+    TriangleEffect(SDL_Haptic* haptic) : HapticEffect(haptic) {}
+    std::string GetName() const override;
+
+  private:
+    void SetSDLHapticEffect(ControlState state) override;
+  };
+
+  class LeftRightEffect : public HapticEffect
+  {
+  public:
+    LeftRightEffect(SDL_Haptic* haptic) : HapticEffect(haptic) {}
+    std::string GetName() const override;
+
+  private:
+    void SetSDLHapticEffect(ControlState state) override;
+  };
 #endif
 
 public:
-	bool UpdateInput() override;
-	bool UpdateOutput() override;
+  void UpdateInput() override;
 
-	Joystick(SDL_Joystick* const joystick, const int sdl_index, const unsigned int index);
-	~Joystick();
+  Joystick(SDL_Joystick* const joystick, const int sdl_index);
+  ~Joystick();
 
-	std::string GetName() const override;
-	int GetId() const override;
-	std::string GetSource() const override;
+  std::string GetName() const override;
+  std::string GetSource() const override;
 
 private:
-	SDL_Joystick* const      m_joystick;
-	const int                m_sdl_index;
-	const unsigned int       m_index;
+  SDL_Joystick* const m_joystick;
+  const int m_sdl_index;
 
 #ifdef USE_SDL_HAPTIC
-	std::list<EffectIDState> m_state_out;
-	SDL_Haptic*              m_haptic;
+  SDL_Haptic* m_haptic;
 #endif
 };
-
 }
 }

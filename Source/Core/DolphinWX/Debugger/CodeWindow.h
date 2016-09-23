@@ -1,17 +1,12 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
+#include <wx/aui/framemanager.h>
 #include <wx/bitmap.h>
-#include <wx/defs.h>
-#include <wx/event.h>
-#include <wx/gdicmn.h>
 #include <wx/panel.h>
-#include <wx/string.h>
-#include <wx/translation.h>
-#include <wx/windowid.h>
 
 #include "Common/CommonTypes.h"
 #include "Common/Event.h"
@@ -19,130 +14,116 @@
 
 class CFrame;
 class CRegisterWindow;
+class CWatchWindow;
 class CBreakPointWindow;
 class CMemoryWindow;
 class CJitWindow;
 class CCodeView;
 class DSPDebuggerLLE;
 class GFXDebuggerPanel;
-struct SCoreStartupParameter;
+struct SConfig;
 
-class wxToolBar;
+class DolphinAuiToolBar;
 class wxListBox;
 class wxMenu;
 class wxMenuBar;
+class wxToolBar;
 
-class CCodeWindow
-	: public wxPanel
+class CCodeWindow : public wxPanel
 {
-	public:
+public:
+  CCodeWindow(const SConfig& _LocalCoreStartupParameter, CFrame* parent, wxWindowID id = wxID_ANY,
+              const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
+              long style = wxTAB_TRAVERSAL | wxBORDER_NONE, const wxString& name = _("Code"));
+  ~CCodeWindow();
 
-		CCodeWindow(const SCoreStartupParameter& _LocalCoreStartupParameter,
-			CFrame * parent,
-			wxWindowID id = wxID_ANY,
-			const wxPoint& pos = wxDefaultPosition,
-			const wxSize& size = wxDefaultSize,
-			long style = wxTAB_TRAVERSAL | wxBORDER_NONE,
-			const wxString& name = _("Code")
-			);
+  void Load();
+  void Save();
 
-		void Load();
-		void Save();
+  // Parent interaction
+  CFrame* Parent;
+  wxMenuBar* GetMenuBar();
+  wxToolBar* GetToolBar();
+  wxBitmap m_Bitmaps[Toolbar_Debug_Bitmap_Max];
 
-		// Parent interaction
-		CFrame *Parent;
-		wxMenuBar * GetMenuBar();
-		wxToolBar * GetToolBar();
-		wxBitmap m_Bitmaps[ToolbarDebugBitmapMax];
+  bool UseInterpreter();
+  bool BootToPause();
+  bool AutomaticStart();
+  bool JITNoBlockCache();
+  bool JITNoBlockLinking();
+  bool JumpToAddress(u32 address);
 
-		bool UseInterpreter();
-		bool BootToPause();
-		bool AutomaticStart();
-		bool JITNoBlockCache();
-		bool JITNoBlockLinking();
-		bool JumpToAddress(u32 address);
+  void Update() override;
+  void NotifyMapLoaded();
+  void CreateMenu(const SConfig& _LocalCoreStartupParameter, wxMenuBar* pMenuBar);
+  void CreateMenuOptions(wxMenu* pMenu);
+  void CreateMenuSymbols(wxMenuBar* pMenuBar);
+  void PopulateToolbar(wxToolBar* toolBar);
+  void UpdateButtonStates();
+  void OpenPages();
 
-		void Update() override;
-		void NotifyMapLoaded();
-		void CreateMenu(const SCoreStartupParameter& _LocalCoreStartupParameter, wxMenuBar *pMenuBar);
-		void CreateMenuOptions(wxMenu *pMenu);
-		void CreateMenuSymbols(wxMenuBar *pMenuBar);
-		void RecreateToolbar(wxToolBar*);
-		void PopulateToolbar(wxToolBar* toolBar);
-		void UpdateButtonStates();
-		void OpenPages();
-		void UpdateManager();
+  // Menu bar
+  void ToggleCodeWindow(bool bShow);
+  void ToggleRegisterWindow(bool bShow);
+  void ToggleWatchWindow(bool bShow);
+  void ToggleBreakPointWindow(bool bShow);
+  void ToggleMemoryWindow(bool bShow);
+  void ToggleJitWindow(bool bShow);
+  void ToggleSoundWindow(bool bShow);
+  void ToggleVideoWindow(bool bShow);
 
-		// Menu bar
-		// -------------------
-		void OnCPUMode(wxCommandEvent& event); // CPU Mode menu
-		void OnJITOff(wxCommandEvent& event);
+  // Sub dialogs
+  CRegisterWindow* m_RegisterWindow;
+  CWatchWindow* m_WatchWindow;
+  CBreakPointWindow* m_BreakpointWindow;
+  CMemoryWindow* m_MemoryWindow;
+  CJitWindow* m_JitWindow;
+  DSPDebuggerLLE* m_SoundWindow;
+  GFXDebuggerPanel* m_VideoWindow;
 
-		void ToggleCodeWindow(bool bShow);
-		void ToggleRegisterWindow(bool bShow);
-		void ToggleBreakPointWindow(bool bShow);
-		void ToggleMemoryWindow(bool bShow);
-		void ToggleJitWindow(bool bShow);
-		void ToggleSoundWindow(bool bShow);
-		void ToggleVideoWindow(bool bShow);
+  // Settings
+  bool bAutomaticStart;
+  bool bBootToPause;
+  bool bShowOnStart[IDM_VIDEO_WINDOW - IDM_LOG_WINDOW + 1];
+  int iNbAffiliation[IDM_CODE_WINDOW - IDM_LOG_WINDOW + 1];
 
-		void OnChangeFont(wxCommandEvent& event);
+private:
+  void OnCPUMode(wxCommandEvent& event);
 
-		void OnCodeStep(wxCommandEvent& event);
-		void OnAddrBoxChange(wxCommandEvent& event);
-		void OnSymbolsMenu(wxCommandEvent& event);
-		void OnJitMenu(wxCommandEvent& event);
-		void OnProfilerMenu(wxCommandEvent& event);
+  void OnChangeFont(wxCommandEvent& event);
 
-		// Sub dialogs
-		CRegisterWindow* m_RegisterWindow;
-		CBreakPointWindow* m_BreakpointWindow;
-		CMemoryWindow* m_MemoryWindow;
-		CJitWindow* m_JitWindow;
-		DSPDebuggerLLE* m_SoundWindow;
-		GFXDebuggerPanel* m_VideoWindow;
+  void OnCodeStep(wxCommandEvent& event);
+  void OnAddrBoxChange(wxCommandEvent& event);
+  void OnSymbolsMenu(wxCommandEvent& event);
+  void OnJitMenu(wxCommandEvent& event);
+  void OnProfilerMenu(wxCommandEvent& event);
 
-		// Settings
-		bool bAutomaticStart; bool bBootToPause;
-		bool bShowOnStart[IDM_VIDEOWINDOW - IDM_LOGWINDOW + 1];
-		int iNbAffiliation[IDM_CODEWINDOW - IDM_LOGWINDOW + 1];
+  void OnSymbolListChange(wxCommandEvent& event);
+  void OnSymbolListContextMenu(wxContextMenuEvent& event);
+  void OnCallstackListChange(wxCommandEvent& event);
+  void OnCallersListChange(wxCommandEvent& event);
+  void OnCallsListChange(wxCommandEvent& event);
+  void OnCodeViewChange(wxCommandEvent& event);
+  void OnHostMessage(wxCommandEvent& event);
 
-	private:
+  // Debugger functions
+  void SingleStep();
+  void StepOver();
+  void StepOut();
+  void ToggleBreakpoint();
 
-		enum
-		{
-			// Debugger GUI Objects
-			ID_CODEVIEW,
-			ID_CALLSTACKLIST,
-			ID_CALLERSLIST,
-			ID_CALLSLIST,
-			ID_SYMBOLLIST
-		};
+  void UpdateLists();
+  void UpdateCallstack();
 
-		void OnSymbolListChange(wxCommandEvent& event);
-		void OnSymbolListContextMenu(wxContextMenuEvent& event);
-		void OnCallstackListChange(wxCommandEvent& event);
-		void OnCallersListChange(wxCommandEvent& event);
-		void OnCallsListChange(wxCommandEvent& event);
-		void OnCodeViewChange(wxCommandEvent &event);
-		void OnHostMessage(wxCommandEvent& event);
+  void InitBitmaps();
 
-		// Debugger functions
-		void SingleStep();
-		void StepOver();
-		void ToggleBreakpoint();
+  CCodeView* codeview;
+  wxListBox* callstack;
+  wxListBox* symbols;
+  wxListBox* callers;
+  wxListBox* calls;
+  Common::Event sync_event;
 
-		void UpdateLists();
-		void UpdateCallstack();
-
-		void InitBitmaps();
-
-		CCodeView* codeview;
-		wxListBox* callstack;
-		wxListBox* symbols;
-		wxListBox* callers;
-		wxListBox* calls;
-		Common::Event sync_event;
-
-		DECLARE_EVENT_TABLE()
+  wxAuiManager m_aui_manager;
+  DolphinAuiToolBar* m_aui_toolbar;
 };

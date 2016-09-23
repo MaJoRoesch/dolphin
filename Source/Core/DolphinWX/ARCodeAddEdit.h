@@ -1,52 +1,38 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
 #include <wx/dialog.h>
-#include <wx/event.h>
-#include <wx/gdicmn.h>
-#include <wx/string.h>
-#include <wx/translation.h>
-#include <wx/windowid.h>
 
 class wxSpinButton;
 class wxSpinEvent;
 class wxTextCtrl;
-class wxWindow;
 
-namespace ActionReplay { struct ARCode; }
+namespace ActionReplay
+{
+struct ARCode;
+}
 
 class CARCodeAddEdit : public wxDialog
 {
-	public:
-		CARCodeAddEdit(int _selection, wxWindow* parent,
-			wxWindowID id = 1,
-			const wxString& title = _("Edit ActionReplay Code"),
-			const wxPoint& pos = wxDefaultPosition,
-			const wxSize& size = wxDefaultSize,
-			long style = wxDEFAULT_DIALOG_STYLE);
+public:
+  CARCodeAddEdit(int _selection, std::vector<ActionReplay::ARCode>* _arCodes, wxWindow* parent,
+                 wxWindowID id = wxID_ANY, const wxString& title = _("Edit ActionReplay Code"),
+                 const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
+                 long style = wxDEFAULT_DIALOG_STYLE);
 
-	private:
-		DECLARE_EVENT_TABLE();
+private:
+  wxTextCtrl* EditCheatName;
+  wxSpinButton* EntrySelection;
+  wxTextCtrl* EditCheatCode;
 
-		wxTextCtrl *EditCheatName;
-		wxSpinButton *EntrySelection;
-		wxTextCtrl *EditCheatCode;
+  std::vector<ActionReplay::ARCode>* arCodes;
 
-		enum
-		{
-			ID_EDITCHEAT_NAME_TEXT = 4550,
-			ID_EDITCHEAT_NAME,
-			ID_ENTRY_SELECT,
-			ID_EDITCHEAT_CODE
-		};
+  void SaveCheatData(wxCommandEvent& event);
+  void ChangeEntry(wxSpinEvent& event);
+  void UpdateTextCtrl(ActionReplay::ARCode arCode);
 
-		void SaveCheatData(wxCommandEvent& event);
-		void ChangeEntry(wxSpinEvent& event);
-		void UpdateTextCtrl(ActionReplay::ARCode arCode);
-
-		int selection;
-
+  int selection;
 };

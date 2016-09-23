@@ -1,16 +1,20 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 // TODO(ector): Tons of pshufb optimization of the loads/stores, for SSSE3+, possibly SSE4, only.
 // Should give a very noticeable speed boost to paired single heavy code.
 
-#include "Common/CommonTypes.h"
-#include "Common/CPUDetect.h"
-
 #include "Core/PowerPC/Jit64/Jit.h"
-#include "Core/PowerPC/Jit64/JitAsm.h"
+#include "Common/BitSet.h"
+#include "Common/CPUDetect.h"
+#include "Common/CommonTypes.h"
+#include "Common/x64Emitter.h"
+#include "Core/ConfigManager.h"
 #include "Core/PowerPC/Jit64/JitRegCache.h"
+#include "Core/PowerPC/JitCommon/JitAsmCommon.h"
+#include "Core/PowerPC/JitCommon/Jit_Util.h"
+#include "Core/PowerPC/PowerPC.h"
 
 using namespace Gen;
 
@@ -18,137 +22,155 @@ using namespace Gen;
 // We will have to break block after quantizers are written to.
 void Jit64::psq_stXX(UGeckoInstruction inst)
 {
-	INSTRUCTION_START
-	JITDISABLE(bJITLoadStorePairedOff);
-	FALLBACK_IF(!inst.RA);
+  INSTRUCTION_START
+  JITDISABLE(bJITLoadStorePairedOff);
 
-	s32 offset = inst.SIMM_12;
-	bool indexed = inst.OPCD == 4;
-	bool update = (inst.OPCD == 61 && offset) || (inst.OPCD == 4 && !!(inst.SUBOP6 & 32));
-	int a = inst.RA;
-	int b = indexed ? inst.RB : a;
-	int s = inst.FS;
-	int i = indexed ? inst.Ix : inst.I;
-	int w = indexed ? inst.Wx : inst.W;
+  // For performance, the AsmCommon routines assume address translation is on.
+  FALLBACK_IF(!UReg_MSR(MSR).DR);
 
-	gpr.Lock(a, b);
-	gpr.FlushLockX(RSCRATCH_EXTRA);
-	if (update)
-		gpr.BindToRegister(a, true, true);
-	fpr.BindToRegister(s, true, false);
-	if (gpr.R(a).IsSimpleReg() && gpr.R(b).IsSimpleReg() && (indexed || offset))
-	{
-		if (indexed)
-			LEA(32, RSCRATCH_EXTRA, MComplex(gpr.RX(a), gpr.RX(b), SCALE_1, 0));
-		else
-			LEA(32, RSCRATCH_EXTRA, MDisp(gpr.RX(a), offset));
-	}
-	else
-	{
-		MOV(32, R(RSCRATCH_EXTRA), gpr.R(a));
-		if (indexed)
-			ADD(32, R(RSCRATCH_EXTRA), gpr.R(b));
-		else if (offset)
-			ADD(32, R(RSCRATCH_EXTRA), Imm32((u32)offset));
-	}
-	// In memcheck mode, don't update the address until the exception check
-	if (update && !js.memcheck)
-		MOV(32, gpr.R(a), R(RSCRATCH_EXTRA));
-	// Some games (e.g. Dirt 2) incorrectly set the unused bits which breaks the lookup table code.
-	// Hence, we need to mask out the unused bits. The layout of the GQR register is
-	// UU[SCALE]UUUUU[TYPE] where SCALE is 6 bits and TYPE is 3 bits, so we have to AND with
-	// 0b0011111100000111, or 0x3F07.
-	MOV(32, R(RSCRATCH2), Imm32(0x3F07));
-	AND(32, R(RSCRATCH2), PPCSTATE(spr[SPR_GQR0 + i]));
-	MOVZX(32, 8, RSCRATCH, R(RSCRATCH2));
+  s32 offset = inst.SIMM_12;
+  bool indexed = inst.OPCD == 4;
+  bool update = (inst.OPCD == 61 && offset) || (inst.OPCD == 4 && !!(inst.SUBOP6 & 32));
+  int a = inst.RA;
+  int b = indexed ? inst.RB : a;
+  int s = inst.FS;
+  int i = indexed ? inst.Ix : inst.I;
+  int w = indexed ? inst.Wx : inst.W;
+  FALLBACK_IF(!a);
 
-	// FIXME: Fix ModR/M encoding to allow [RSCRATCH2*8+disp32] without a base register!
-	if (w)
-	{
-		// One value
-		PXOR(XMM0, R(XMM0));  // TODO: See if we can get rid of this cheaply by tweaking the code in the singleStore* functions.
-		CVTSD2SS(XMM0, fpr.R(s));
-		CALLptr(MScaled(RSCRATCH, SCALE_8, (u32)(u64)asm_routines.singleStoreQuantized));
-	}
-	else
-	{
-		// Pair of values
-		CVTPD2PS(XMM0, fpr.R(s));
-		CALLptr(MScaled(RSCRATCH, SCALE_8, (u32)(u64)asm_routines.pairedStoreQuantized));
-	}
+  auto it = js.constantGqr.find(i);
+  bool gqrIsConstant = it != js.constantGqr.end();
+  u32 gqrValue = gqrIsConstant ? it->second & 0xffff : 0;
 
-	if (update && js.memcheck)
-	{
-		MEMCHECK_START(false)
-		if (indexed)
-			ADD(32, gpr.R(a), gpr.R(b));
-		else
-			ADD(32, gpr.R(a), Imm32((u32)offset));
-		MEMCHECK_END
-	}
-	gpr.UnlockAll();
-	gpr.UnlockAllX();
+  gpr.Lock(a, b);
+  gpr.FlushLockX(RSCRATCH_EXTRA);
+  if (update)
+    gpr.BindToRegister(a, true, true);
+
+  MOV_sum(32, RSCRATCH_EXTRA, gpr.R(a), indexed ? gpr.R(b) : Imm32((u32)offset));
+
+  // In memcheck mode, don't update the address until the exception check
+  if (update && !jo.memcheck)
+    MOV(32, gpr.R(a), R(RSCRATCH_EXTRA));
+
+  if (w)
+    CVTSD2SS(XMM0, fpr.R(s));  // one
+  else
+    CVTPD2PS(XMM0, fpr.R(s));  // pair
+
+  if (gqrIsConstant)
+  {
+    int type = gqrValue & 0x7;
+
+    // Paired stores (other than w/type zero) don't yield any real change in
+    // performance right now, but if we can improve fastmem support this might change
+    if (gqrValue == 0)
+    {
+      if (w)
+        GenQuantizedStore(true, static_cast<EQuantizeType>(type), (gqrValue & 0x3F00) >> 8);
+      else
+        GenQuantizedStore(false, static_cast<EQuantizeType>(type), (gqrValue & 0x3F00) >> 8);
+    }
+    else
+    {
+      // We know what GQR is here, so we can load RSCRATCH2 and call into the store method directly
+      // with just the scale bits.
+      MOV(32, R(RSCRATCH2), Imm32(gqrValue & 0x3F00));
+
+      if (w)
+        CALL(asm_routines.singleStoreQuantized[type]);
+      else
+        CALL(asm_routines.pairedStoreQuantized[type]);
+    }
+  }
+  else
+  {
+    // Some games (e.g. Dirt 2) incorrectly set the unused bits which breaks the lookup table code.
+    // Hence, we need to mask out the unused bits. The layout of the GQR register is
+    // UU[SCALE]UUUUU[TYPE] where SCALE is 6 bits and TYPE is 3 bits, so we have to AND with
+    // 0b0011111100000111, or 0x3F07.
+    MOV(32, R(RSCRATCH2), Imm32(0x3F07));
+    AND(32, R(RSCRATCH2), PPCSTATE(spr[SPR_GQR0 + i]));
+    MOVZX(32, 8, RSCRATCH, R(RSCRATCH2));
+
+    if (w)
+      CALLptr(MScaled(RSCRATCH, SCALE_8, (u32)(u64)asm_routines.singleStoreQuantized));
+    else
+      CALLptr(MScaled(RSCRATCH, SCALE_8, (u32)(u64)asm_routines.pairedStoreQuantized));
+  }
+
+  if (update && jo.memcheck)
+  {
+    if (indexed)
+      ADD(32, gpr.R(a), gpr.R(b));
+    else
+      ADD(32, gpr.R(a), Imm32((u32)offset));
+  }
+  gpr.UnlockAll();
+  gpr.UnlockAllX();
 }
 
 void Jit64::psq_lXX(UGeckoInstruction inst)
 {
-	INSTRUCTION_START
-	JITDISABLE(bJITLoadStorePairedOff);
-	FALLBACK_IF(!inst.RA);
+  INSTRUCTION_START
+  JITDISABLE(bJITLoadStorePairedOff);
 
-	s32 offset = inst.SIMM_12;
-	bool indexed = inst.OPCD == 4;
-	bool update = (inst.OPCD == 57 && offset) || (inst.OPCD == 4 && !!(inst.SUBOP6 & 32));
-	int a = inst.RA;
-	int b = indexed ? inst.RB : a;
-	int s = inst.FS;
-	int i = indexed ? inst.Ix : inst.I;
-	int w = indexed ? inst.Wx : inst.W;
+  // For performance, the AsmCommon routines assume address translation is on.
+  FALLBACK_IF(!UReg_MSR(MSR).DR);
 
-	gpr.Lock(a, b);
-	gpr.FlushLockX(RSCRATCH_EXTRA);
-	gpr.BindToRegister(a, true, update);
-	fpr.BindToRegister(s, false, true);
-	if (gpr.R(a).IsSimpleReg() && gpr.R(b).IsSimpleReg() && (indexed || offset))
-	{
-		if (indexed)
-			LEA(32, RSCRATCH_EXTRA, MComplex(gpr.RX(a), gpr.RX(b), SCALE_1, 0));
-		else
-			LEA(32, RSCRATCH_EXTRA, MDisp(gpr.RX(a), offset));
-	}
-	else
-	{
-		MOV(32, R(RSCRATCH_EXTRA), gpr.R(a));
-		if (indexed)
-			ADD(32, R(RSCRATCH_EXTRA), gpr.R(b));
-		else if (offset)
-			ADD(32, R(RSCRATCH_EXTRA), Imm32((u32)offset));
-	}
-	// In memcheck mode, don't update the address until the exception check
-	if (update && !js.memcheck)
-		MOV(32, gpr.R(a), R(RSCRATCH_EXTRA));
-	MOV(32, R(RSCRATCH2), Imm32(0x3F07));
+  s32 offset = inst.SIMM_12;
+  bool indexed = inst.OPCD == 4;
+  bool update = (inst.OPCD == 57 && offset) || (inst.OPCD == 4 && !!(inst.SUBOP6 & 32));
+  int a = inst.RA;
+  int b = indexed ? inst.RB : a;
+  int s = inst.FS;
+  int i = indexed ? inst.Ix : inst.I;
+  int w = indexed ? inst.Wx : inst.W;
+  FALLBACK_IF(!a);
 
-	// Get the high part of the GQR register
-	OpArg gqr = PPCSTATE(spr[SPR_GQR0 + i]);
-	gqr.offset += 2;
+  auto it = js.constantGqr.find(i);
+  bool gqrIsConstant = it != js.constantGqr.end();
+  u32 gqrValue = gqrIsConstant ? it->second >> 16 : 0;
 
-	AND(32, R(RSCRATCH2), gqr);
-	MOVZX(32, 8, RSCRATCH, R(RSCRATCH2));
+  gpr.Lock(a, b);
 
-	CALLptr(MScaled(RSCRATCH, SCALE_8, (u32)(u64)(&asm_routines.pairedLoadQuantized[w * 8])));
+  gpr.FlushLockX(RSCRATCH_EXTRA);
+  gpr.BindToRegister(a, true, update);
+  fpr.BindToRegister(s, false, true);
 
-	MEMCHECK_START(false)
-	CVTPS2PD(fpr.RX(s), R(XMM0));
-	if (update && js.memcheck)
-	{
-		if (indexed)
-			ADD(32, gpr.R(a), gpr.R(b));
-		else
-			ADD(32, gpr.R(a), Imm32((u32)offset));
-	}
-	MEMCHECK_END
+  MOV_sum(32, RSCRATCH_EXTRA, gpr.R(a), indexed ? gpr.R(b) : Imm32((u32)offset));
 
-	gpr.UnlockAll();
-	gpr.UnlockAllX();
+  // In memcheck mode, don't update the address until the exception check
+  if (update && !jo.memcheck)
+    MOV(32, gpr.R(a), R(RSCRATCH_EXTRA));
+
+  if (gqrIsConstant)
+  {
+    GenQuantizedLoad(w == 1, static_cast<EQuantizeType>(gqrValue & 0x7), (gqrValue & 0x3F00) >> 8);
+  }
+  else
+  {
+    MOV(32, R(RSCRATCH2), Imm32(0x3F07));
+
+    // Get the high part of the GQR register
+    OpArg gqr = PPCSTATE(spr[SPR_GQR0 + i]);
+    gqr.AddMemOffset(2);
+
+    AND(32, R(RSCRATCH2), gqr);
+    MOVZX(32, 8, RSCRATCH, R(RSCRATCH2));
+
+    CALLptr(MScaled(RSCRATCH, SCALE_8, (u32)(u64)(&asm_routines.pairedLoadQuantized[w * 8])));
+  }
+
+  CVTPS2PD(fpr.RX(s), R(XMM0));
+  if (update && jo.memcheck)
+  {
+    if (indexed)
+      ADD(32, gpr.R(a), gpr.R(b));
+    else
+      ADD(32, gpr.R(a), Imm32((u32)offset));
+  }
+
+  gpr.UnlockAll();
+  gpr.UnlockAllX();
 }

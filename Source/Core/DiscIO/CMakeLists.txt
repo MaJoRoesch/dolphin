@@ -1,18 +1,16 @@
-set(SRCS	BannerLoader.cpp
-			BannerLoaderGC.cpp
-			BannerLoaderWii.cpp
-			Blob.cpp
+set(SRCS	Blob.cpp
 			CISOBlob.cpp
 			WbfsBlob.cpp
 			CompressedBlob.cpp
 			DiscScrubber.cpp
 			DriveBlob.cpp
+			Enums.cpp
 			FileBlob.cpp
 			FileMonitor.cpp
 			FileSystemGCWii.cpp
 			Filesystem.cpp
 			NANDContentLoader.cpp
-			VolumeCommon.cpp
+			Volume.cpp
 			VolumeCreator.cpp
 			VolumeDirectory.cpp
 			VolumeGC.cpp

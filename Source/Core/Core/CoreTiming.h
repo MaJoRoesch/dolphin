@@ -1,5 +1,5 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
@@ -24,38 +24,62 @@ class PointerWrap;
 
 namespace CoreTiming
 {
+// These really shouldn't be global, but jit64 accesses them directly
+extern s64 g_global_timer;
+extern u64 g_fake_TB_start_value;
+extern u64 g_fake_TB_start_ticks;
+extern int g_slice_length;
+extern float g_last_OC_factor_inverted;
 
-extern s64 globalTimer;
-extern u64 fakeTBStartValue;
-extern u64 fakeTBStartTicks;
-
+// CoreTiming begins at the boundary of timing slice -1. An initial call to Advance() is
+// required to end slice -1 and start slice 0 before the first cycle of code is executed.
 void Init();
 void Shutdown();
 
-typedef void (*TimedCallback)(u64 userdata, int cyclesLate);
+typedef void (*TimedCallback)(u64 userdata, s64 cyclesLate);
 
+// This should only be called from the CPU thread, if you are calling it any other thread, you are
+// doing something evil
 u64 GetTicks();
 u64 GetIdleTicks();
 
-void DoState(PointerWrap &p);
+void DoState(PointerWrap& p);
 
-// Returns the event_type identifier. if name is not unique, an existing event_type will be discarded.
-int RegisterEvent(const std::string& name, TimedCallback callback);
+struct EventType;
+
+// Returns the event_type identifier. if name is not unique, an existing event_type will be
+// discarded.
+EventType* RegisterEvent(const std::string& name, TimedCallback callback);
 void UnregisterAllEvents();
 
-// userdata MAY NOT CONTAIN POINTERS. userdata might get written and reloaded from disk,
-// when we implement state saves.
-void ScheduleEvent(int cyclesIntoFuture, int event_type, u64 userdata=0);
-void ScheduleEvent_Threadsafe(int cyclesIntoFuture, int event_type, u64 userdata=0);
-void ScheduleEvent_Threadsafe_Immediate(int event_type, u64 userdata=0);
+enum class FromThread
+{
+  CPU,
+  NON_CPU,
+  // Don't use ANY unless you're sure you need to call from
+  // both the CPU thread and at least one other thread
+  ANY
+};
+
+// userdata MAY NOT CONTAIN POINTERS. userdata might get written and reloaded from savestates.
+// After the first Advance, the slice lengths and the downcount will be reduced whenever an event
+// is scheduled earlier than the current values (when scheduled from the CPU Thread only).
+// Scheduling from a callback will not update the downcount until the Advance() completes.
+void ScheduleEvent(s64 cycles_into_future, EventType* event_type, u64 userdata = 0,
+                   FromThread from = FromThread::CPU);
 
 // We only permit one event of each type in the queue at a time.
-void RemoveEvent(int event_type);
-void RemoveAllEvents(int event_type);
-bool IsScheduled(int event_type);
+void RemoveEvent(EventType* event_type);
+void RemoveAllEvents(EventType* event_type);
+
+// Advance must be called at the beginning of dispatcher loops, not the end. Advance() ends
+// the previous timing slice and begins the next one, you must Advance from the previous
+// slice to the current one before executing any cycles. CoreTiming starts in slice -1 so an
+// Advance() is required to initialize the slice length before the first cycle of emulated
+// instructions is executed.
+// NOTE: Advance updates the PowerPC downcount and performs a PPC external exception check.
 void Advance();
 void MoveEvents();
-void ProcessFifoWaitEvents();
 
 // Pretend that the main CPU has executed enough cycles to reach the next event.
 void Idle();
@@ -64,10 +88,6 @@ void Idle();
 void ClearPendingEvents();
 
 void LogPendingEvents();
-void SetMaximumSlice(int maximumSliceLength);
-void ResetSliceLength();
-
-void RegisterAdvanceCallback(void (*callback)(int cyclesExecuted));
 
 std::string GetScheduledEventsSummary();
 
@@ -80,8 +100,6 @@ void SetFakeTBStartValue(u64 val);
 u64 GetFakeTBStartTicks();
 void SetFakeTBStartTicks(u64 val);
 
-void ForceExceptionCheck(int cycles);
+void ForceExceptionCheck(s64 cycles);
 
-extern int slicelength;
-
-} // end of namespace
+}  // end of namespace

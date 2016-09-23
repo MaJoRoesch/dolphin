@@ -1,37 +1,29 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2011 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
+
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <vector>
 
 // TODO: ugly
 #ifdef _WIN32
 #include "VideoBackends/D3D/VideoBackend.h"
+#include "VideoBackends/D3D12/VideoBackend.h"
 #endif
+#include "VideoBackends/Null/VideoBackend.h"
 #include "VideoBackends/OGL/VideoBackend.h"
 #include "VideoBackends/Software/VideoBackend.h"
 
 #include "VideoCommon/VideoBackendBase.h"
 
-std::vector<VideoBackend*> g_available_video_backends;
-VideoBackend* g_video_backend = nullptr;
-static VideoBackend* s_default_backend = nullptr;
+std::vector<std::unique_ptr<VideoBackendBase>> g_available_video_backends;
+VideoBackendBase* g_video_backend = nullptr;
+static VideoBackendBase* s_default_backend = nullptr;
 
 #ifdef _WIN32
 #include <windows.h>
-
-// http://msdn.microsoft.com/en-us/library/ms725491.aspx
-static bool IsGteVista()
-{
-	OSVERSIONINFOEX osvi;
-	DWORDLONG dwlConditionMask = 0;
-
-	ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
-	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-	osvi.dwMajorVersion = 6;
-
-	VER_SET_CONDITION(dwlConditionMask, VER_MAJORVERSION, VER_GREATER_EQUAL);
-
-	return VerifyVersionInfo(&osvi, VER_MAJORVERSION, dwlConditionMask) != FALSE;
-}
 
 // Nvidia drivers >= v302 will check if the application exports a global
 // variable named NvOptimusEnablement to know if it should run the app in high
@@ -41,45 +33,52 @@ __declspec(dllexport) DWORD NvOptimusEnablement = 1;
 }
 #endif
 
-void VideoBackend::PopulateList()
+void VideoBackendBase::PopulateList()
 {
-	VideoBackend* backends[4] = { nullptr };
-
-	// OGL > D3D11 > SW
-#if !defined(USE_GLES) || USE_GLES3
-	g_available_video_backends.push_back(backends[0] = new OGL::VideoBackend);
-#endif
+  // OGL > D3D11 > D3D12 > SW > Null
+  g_available_video_backends.push_back(std::make_unique<OGL::VideoBackend>());
 #ifdef _WIN32
-	if (IsGteVista())
-		g_available_video_backends.push_back(backends[1] = new DX11::VideoBackend);
+  g_available_video_backends.push_back(std::make_unique<DX11::VideoBackend>());
+
+  // More robust way to check for D3D12 support than (unreliable) OS version checks.
+  HMODULE d3d12_module = LoadLibraryA("d3d12.dll");
+  if (d3d12_module != nullptr)
+  {
+    FreeLibrary(d3d12_module);
+    g_available_video_backends.push_back(std::make_unique<DX12::VideoBackend>());
+  }
 #endif
-	g_available_video_backends.push_back(backends[3] = new SW::VideoSoftware);
+  g_available_video_backends.push_back(std::make_unique<SW::VideoSoftware>());
+  g_available_video_backends.push_back(std::make_unique<Null::VideoBackend>());
 
-	for (VideoBackend* backend : backends)
-	{
-		if (backend)
-		{
-			s_default_backend = g_video_backend = backend;
-			break;
-		}
-	}
+  const auto iter =
+      std::find_if(g_available_video_backends.begin(), g_available_video_backends.end(),
+                   [](const auto& backend) { return backend != nullptr; });
+
+  if (iter == g_available_video_backends.end())
+    return;
+
+  s_default_backend = iter->get();
+  g_video_backend = iter->get();
 }
 
-void VideoBackend::ClearList()
+void VideoBackendBase::ClearList()
 {
-	while (!g_available_video_backends.empty())
-	{
-		delete g_available_video_backends.back();
-		g_available_video_backends.pop_back();
-	}
+  g_available_video_backends.clear();
 }
 
-void VideoBackend::ActivateBackend(const std::string& name)
+void VideoBackendBase::ActivateBackend(const std::string& name)
 {
-	if (name.length() == 0) // If nullptr, set it to the default backend (expected behavior)
-		g_video_backend = s_default_backend;
+  // If empty, set it to the default backend (expected behavior)
+  if (name.empty())
+    g_video_backend = s_default_backend;
 
-	for (VideoBackend* backend : g_available_video_backends)
-		if (name == backend->GetName())
-			g_video_backend = backend;
+  const auto iter =
+      std::find_if(g_available_video_backends.begin(), g_available_video_backends.end(),
+                   [&name](const auto& backend) { return name == backend->GetName(); });
+
+  if (iter == g_available_video_backends.end())
+    return;
+
+  g_video_backend = iter->get();
 }

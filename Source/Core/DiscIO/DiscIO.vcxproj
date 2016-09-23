@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -16,7 +16,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
@@ -35,20 +35,18 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemGroup>
-    <ClCompile Include="BannerLoader.cpp" />
-    <ClCompile Include="BannerLoaderGC.cpp" />
-    <ClCompile Include="BannerLoaderWii.cpp" />
     <ClCompile Include="Blob.cpp" />
     <ClCompile Include="CISOBlob.cpp" />
     <ClCompile Include="CompressedBlob.cpp" />
     <ClCompile Include="DiscScrubber.cpp" />
     <ClCompile Include="DriveBlob.cpp" />
+    <ClCompile Include="Enums.cpp" />
     <ClCompile Include="FileBlob.cpp" />
     <ClCompile Include="FileMonitor.cpp" />
     <ClCompile Include="Filesystem.cpp" />
     <ClCompile Include="FileSystemGCWii.cpp" />
     <ClCompile Include="NANDContentLoader.cpp" />
-    <ClCompile Include="VolumeCommon.cpp" />
+    <ClCompile Include="Volume.cpp" />
     <ClCompile Include="VolumeCreator.cpp" />
     <ClCompile Include="VolumeDirectory.cpp" />
     <ClCompile Include="VolumeGC.cpp" />
@@ -58,14 +56,12 @@
     <ClCompile Include="WiiWad.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BannerLoader.h" />
-    <ClInclude Include="BannerLoaderGC.h" />
-    <ClInclude Include="BannerLoaderWii.h" />
     <ClInclude Include="Blob.h" />
     <ClInclude Include="CISOBlob.h" />
     <ClInclude Include="CompressedBlob.h" />
     <ClInclude Include="DiscScrubber.h" />
     <ClInclude Include="DriveBlob.h" />
+    <ClInclude Include="Enums.h" />
     <ClInclude Include="FileBlob.h" />
     <ClInclude Include="FileMonitor.h" />
     <ClInclude Include="Filesystem.h" />
@@ -84,7 +80,7 @@
     <Text Include="CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(ExternalsDir)polarssl\visualc\PolarSSL.vcxproj">
+    <ProjectReference Include="$(ExternalsDir)mbedtls\mbedTLS.vcxproj">
       <Project>{bdb6578b-0691-4e80-a46c-df21639fd3b8}</Project>
     </ProjectReference>
     <ProjectReference Include="$(ExternalsDir)zlib\zlib.vcxproj">

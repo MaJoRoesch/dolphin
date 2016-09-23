@@ -1,63 +1,82 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
 #include <wx/control.h>
-#include <wx/event.h>
-
 #include "Common/CommonTypes.h"
 
 class DebugInterface;
-class wxWindow;
+
+enum class MemoryDataType
+{
+  U8,
+  U16,
+  U32
+};
 
 class CMemoryView : public wxControl
 {
 public:
-	CMemoryView(DebugInterface* debuginterface, wxWindow* parent);
-	void OnPaint(wxPaintEvent& event);
-	void OnMouseDownL(wxMouseEvent& event);
-	void OnMouseMove(wxMouseEvent& event);
-	void OnMouseUpL(wxMouseEvent& event);
-	void OnMouseDownR(wxMouseEvent& event);
-	void OnScrollWheel(wxMouseEvent& event);
-	void OnPopupMenu(wxCommandEvent& event);
+  CMemoryView(DebugInterface* debuginterface, wxWindow* parent);
 
-	u32 GetSelection() { return selection ; }
-	int GetMemoryType() { return memory; }
+  u32 GetSelection() const { return selection; }
+  int GetMemoryType() const { return memory; }
+  void Center(u32 addr)
+  {
+    curAddress = addr;
+    Refresh();
+  }
 
-	void Center(u32 addr)
-	{
-		curAddress = addr;
-		Refresh();
-	}
-	int dataType;   // u8,u16,u32
-	int curAddress; // Will be accessed by parent
+  void SetDataType(MemoryDataType data_type)
+  {
+    dataType = data_type;
+    Refresh();
+  }
+
+  void SetMemCheckOptions(bool read, bool write, bool log)
+  {
+    memCheckRead = read;
+    memCheckWrite = write;
+    memCheckLog = log;
+  }
 
 private:
-	int YToAddress(int y);
-	void OnResize(wxSizeEvent& event);
+  void OnPaint(wxPaintEvent& event);
+  void OnMouseDownL(wxMouseEvent& event);
+  void OnMouseMove(wxMouseEvent& event);
+  void OnMouseUpL(wxMouseEvent& event);
+  void OnMouseDownR(wxMouseEvent& event);
+  void OnScrollWheel(wxMouseEvent& event);
+  void OnPopupMenu(wxCommandEvent& event);
 
-	DebugInterface* debugger;
+  int YToAddress(int y);
+  void OnResize(wxSizeEvent& event);
 
-	int align;
-	int rowHeight;
+  DebugInterface* debugger;
 
-	u32 selection;
-	u32 oldSelection;
-	bool selecting;
+  int align;
+  int rowHeight;
 
-	int memory;
+  u32 selection;
+  u32 oldSelection;
+  bool selecting;
 
-	enum EViewAsType
-	{
-		VIEWAS_ASCII = 0,
-		VIEWAS_FP,
-		VIEWAS_HEX,
-	};
+  int memory;
+  int curAddress;
+  MemoryDataType dataType;
 
-	EViewAsType viewAsType;
+  bool memCheckRead;
+  bool memCheckWrite;
+  bool memCheckLog;
 
-	DECLARE_EVENT_TABLE()
+  enum EViewAsType
+  {
+    VIEWAS_ASCII = 0,
+    VIEWAS_FP,
+    VIEWAS_HEX,
+  };
+
+  EViewAsType viewAsType;
 };

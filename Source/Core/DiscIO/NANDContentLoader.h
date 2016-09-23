@@ -1,143 +1,220 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2009 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
 #include <cstddef>
-#include <map>
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "Common/CommonTypes.h"
-#include "DiscIO/Volume.h"
+#include "Common/NandPaths.h"
 
 namespace DiscIO
 {
-	bool Add_Ticket(u64 TitleID, const u8 *p_tik, u32 tikSize);
-struct SNANDContent
+enum class Country;
+}
+
+namespace DiscIO
 {
-	u32 m_ContentID;
-	u16 m_Index;
-	u16 m_Type;
-	u32 m_Size;
-	u8 m_SHA1Hash[20];
-	u8 m_Header[36]; //all of the above
+bool AddTicket(u64 title_id, const std::vector<u8>& ticket);
 
-	std::string m_Filename;
-	u8* m_pData;
-};
-
-// pure virtual interface so just the NANDContentManager can create these files only
-class INANDContentLoader
+class CNANDContentData
 {
 public:
-
-	INANDContentLoader() {}
-
-	virtual ~INANDContentLoader()  {}
-
-	virtual bool IsValid() const = 0;
-	virtual void RemoveTitle() const = 0;
-	virtual u64 GetTitleID() const = 0;
-	virtual u16 GetIosVersion() const = 0;
-	virtual u32 GetBootIndex() const = 0;
-	virtual size_t GetContentSize() const = 0;
-	virtual const SNANDContent* GetContentByIndex(int _Index) const = 0;
-	virtual const u8* GetTMDView() const = 0;
-	virtual const u8* GetTMDHeader() const = 0;
-	virtual u32 GetTIKSize() const = 0;
-	virtual const u8* GetTIK() const = 0;
-	virtual const std::vector<SNANDContent>& GetContent() const = 0;
-	virtual u16 GetTitleVersion() const = 0;
-	virtual u16 GetNumEntries() const = 0;
-	virtual DiscIO::IVolume::ECountry GetCountry() const = 0;
-	virtual u8 GetCountryChar() const = 0;
-
-	enum
-	{
-		TMD_VIEW_SIZE       = 0x58,
-		TMD_HEADER_SIZE     = 0x1E4,
-		CONTENT_HEADER_SIZE = 0x24,
-		TICKET_SIZE         = 0x2A4
-	};
+  virtual ~CNANDContentData() = 0;
+  virtual void Open() {}
+  virtual std::vector<u8> Get() = 0;
+  virtual bool GetRange(u32 start, u32 size, u8* buffer) = 0;
+  virtual void Close() {}
 };
 
+class CNANDContentDataFile final : public CNANDContentData
+{
+public:
+  explicit CNANDContentDataFile(const std::string& filename) : m_filename(filename) {}
+  void Open() override;
+  std::vector<u8> Get() override;
+  bool GetRange(u32 start, u32 size, u8* buffer) override;
+  void Close() override;
 
-// we open the NAND Content files to often... lets cache them
+private:
+  void EnsureOpen();
+
+  const std::string m_filename;
+  std::unique_ptr<File::IOFile> m_file;
+};
+class CNANDContentDataBuffer final : public CNANDContentData
+{
+public:
+  explicit CNANDContentDataBuffer(const std::vector<u8>& buffer) : m_buffer(buffer) {}
+  std::vector<u8> Get() override { return m_buffer; }
+  bool GetRange(u32 start, u32 size, u8* buffer) override;
+
+private:
+  const std::vector<u8> m_buffer;
+};
+
+struct SNANDContent
+{
+  u32 m_ContentID;
+  u16 m_Index;
+  u16 m_Type;
+  u32 m_Size;
+  u8 m_SHA1Hash[20];
+  u8 m_Header[36];  // all of the above
+
+  std::unique_ptr<CNANDContentData> m_Data;
+};
+
+// Instances of this class must be created by CNANDContentManager
+class CNANDContentLoader final
+{
+public:
+  explicit CNANDContentLoader(const std::string& content_name);
+  ~CNANDContentLoader();
+
+  bool IsValid() const { return m_Valid; }
+  void RemoveTitle() const;
+  u64 GetTitleID() const { return m_TitleID; }
+  u16 GetIosVersion() const { return m_IosVersion; }
+  u32 GetBootIndex() const { return m_BootIndex; }
+  size_t GetContentSize() const { return m_Content.size(); }
+  const SNANDContent* GetContentByIndex(int index) const;
+  const u8* GetTMDView() const { return m_TMDView; }
+  const u8* GetTMDHeader() const { return m_TMDHeader; }
+  const std::vector<u8>& GetTicket() const { return m_Ticket; }
+  const std::vector<SNANDContent>& GetContent() const { return m_Content; }
+  u16 GetTitleVersion() const { return m_TitleVersion; }
+  u16 GetNumEntries() const { return m_NumEntries; }
+  DiscIO::Country GetCountry() const;
+  u8 GetCountryChar() const { return m_Country; }
+  enum
+  {
+    TMD_VIEW_SIZE = 0x58,
+    TMD_HEADER_SIZE = 0x1E4,
+    CONTENT_HEADER_SIZE = 0x24,
+    TICKET_SIZE = 0x2A4
+  };
+
+private:
+  bool Initialize(const std::string& name);
+  void InitializeContentEntries(const std::vector<u8>& tmd,
+                                const std::vector<u8>& decrypted_title_key,
+                                const std::vector<u8>& data_app);
+
+  static std::vector<u8> AESDecode(const u8* key, u8* iv, const u8* src, u32 size);
+  static std::vector<u8> GetKeyFromTicket(const std::vector<u8>& ticket);
+
+  bool m_Valid;
+  bool m_IsWAD;
+  std::string m_Path;
+  u64 m_TitleID;
+  u16 m_IosVersion;
+  u32 m_BootIndex;
+  u16 m_NumEntries;
+  u16 m_TitleVersion;
+  u8 m_TMDView[TMD_VIEW_SIZE];
+  u8 m_TMDHeader[TMD_HEADER_SIZE];
+  std::vector<u8> m_Ticket;
+  u8 m_Country;
+
+  std::vector<SNANDContent> m_Content;
+};
+
+// we open the NAND Content files too often... let's cache them
 class CNANDContentManager
 {
 public:
-	static CNANDContentManager& Access() { return m_Instance; }
-	u64 Install_WiiWAD(std::string &fileName);
+  static CNANDContentManager& Access()
+  {
+    static CNANDContentManager instance;
+    return instance;
+  }
+  u64 Install_WiiWAD(const std::string& fileName);
 
-	const INANDContentLoader& GetNANDLoader(const std::string& _rName, bool forceReload = false);
-	const INANDContentLoader& GetNANDLoader(u64 _titleId, bool forceReload = false);
-	bool RemoveTitle(u64 _titleID);
+  const CNANDContentLoader& GetNANDLoader(const std::string& content_path);
+  const CNANDContentLoader& GetNANDLoader(u64 title_id, Common::FromWhichRoot from);
+  bool RemoveTitle(u64 title_id, Common::FromWhichRoot from);
+  void ClearCache();
 
 private:
-	CNANDContentManager() {}
-	~CNANDContentManager();
+  CNANDContentManager() {}
+  ~CNANDContentManager();
 
-	static CNANDContentManager m_Instance;
+  CNANDContentManager(CNANDContentManager const&) = delete;
+  void operator=(CNANDContentManager const&) = delete;
 
-	typedef std::map<std::string, INANDContentLoader*> CNANDContentMap;
-	CNANDContentMap m_Map;
+  std::unordered_map<std::string, std::unique_ptr<CNANDContentLoader>> m_map;
 };
 
 class CSharedContent
 {
 public:
-	static CSharedContent& AccessInstance() { return m_Instance; }
+  static CSharedContent& AccessInstance()
+  {
+    static CSharedContent instance;
+    return instance;
+  }
 
-	std::string GetFilenameFromSHA1(const u8* _pHash);
-	std::string AddSharedContent(const u8* _pHash);
-	void UpdateLocation();
+  std::string GetFilenameFromSHA1(const u8* hash);
+  std::string AddSharedContent(const u8* hash);
+  void UpdateLocation();
 
 private:
-	CSharedContent();
-	virtual ~CSharedContent();
+  CSharedContent();
+  virtual ~CSharedContent();
 
-#pragma pack(push,1)
-	struct SElement
-	{
-		u8 FileName[8];
-		u8 SHA1Hash[20];
-	};
+  CSharedContent(CSharedContent const&) = delete;
+  void operator=(CSharedContent const&) = delete;
+
+#pragma pack(push, 1)
+  struct SElement
+  {
+    u8 FileName[8];
+    u8 SHA1Hash[20];
+  };
 #pragma pack(pop)
 
-	u32 m_lastID;
-	std::string m_contentMap;
-	std::vector<SElement> m_Elements;
-	static CSharedContent m_Instance;
+  u32 m_LastID;
+  std::string m_ContentMap;
+  std::vector<SElement> m_Elements;
 };
 
 class cUIDsys
 {
 public:
-	static cUIDsys& AccessInstance() { return m_Instance; }
+  static cUIDsys& AccessInstance()
+  {
+    static cUIDsys instance;
+    return instance;
+  }
 
-	u32 GetUIDFromTitle(u64 _Title);
-	void AddTitle(u64 _Title);
-	void GetTitleIDs(std::vector<u64>& _TitleIDs, bool _owned = false);
-	void UpdateLocation();
+  u32 GetUIDFromTitle(u64 title_id);
+  void AddTitle(u64 title_id);
+  void GetTitleIDs(std::vector<u64>& title_ids, bool owned = false);
+  void UpdateLocation();
 
 private:
-	cUIDsys();
-	virtual ~cUIDsys();
+  cUIDsys();
+  virtual ~cUIDsys();
 
-#pragma pack(push,1)
-	struct SElement
-	{
-		u8 titleID[8];
-		u8 UID[4];
-	};
+  cUIDsys(cUIDsys const&) = delete;
+  void operator=(cUIDsys const&) = delete;
+
+#pragma pack(push, 1)
+  struct SElement
+  {
+    u8 titleID[8];
+    u8 UID[4];
+  };
 #pragma pack(pop)
 
-	u32 m_lastUID;
-	std::string m_uidSys;
-	std::vector<SElement> m_Elements;
-	static cUIDsys m_Instance;
+  u32 m_LastUID;
+  std::string m_UidSys;
+  std::vector<SElement> m_Elements;
 };
-
 }

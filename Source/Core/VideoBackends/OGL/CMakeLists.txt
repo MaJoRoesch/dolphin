@@ -1,6 +1,6 @@
-set(SRCS GLExtensions/GLExtensions.cpp
+set(SRCS
+	   BoundingBox.cpp
 	   FramebufferManager.cpp
-	   GLUtil.cpp
 	   main.cpp
 	   NativeVertexFormat.cpp
 	   PerfQuery.cpp
@@ -14,22 +14,13 @@ set(SRCS GLExtensions/GLExtensions.cpp
 	   TextureConverter.cpp
 	   VertexManager.cpp)
 
-set(LIBS	videocommon
+set(LIBS	${LIBS}
+			videocommon
 			SOIL
 			common
-			dl
 			${X11_LIBRARIES})
-if(USE_EGL)
-	set(LIBS ${LIBS}
-		EGL)
-endif()
 
-if(wxWidgets_FOUND)
-	set(LIBS	${LIBS} ${wxWidgets_LIBRARIES})
-endif(wxWidgets_FOUND)
-
-if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" OR
-	${CMAKE_SYSTEM_NAME} MATCHES "NetBSD")
+if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD|NetBSD")
 	set(LIBS	${LIBS} usbhid)
 endif()
 

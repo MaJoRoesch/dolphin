@@ -1,8 +1,13 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
+
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
 #if defined(HAVE_ALSA) && HAVE_ALSA
 #include <alsa/asoundlib.h>
@@ -10,41 +15,48 @@
 
 #include "AudioCommon/SoundStream.h"
 #include "Common/CommonTypes.h"
-#include "Common/Thread.h"
 
 class AlsaSound final : public SoundStream
 {
 #if defined(HAVE_ALSA) && HAVE_ALSA
 public:
-	AlsaSound(CMixer *mixer);
-	virtual ~AlsaSound();
+  AlsaSound();
 
-	virtual bool Start() override;
-	virtual void SoundLoop() override;
-	virtual void Stop() override;
+  bool Start() override;
+  void SoundLoop() override;
+  void Stop() override;
+  void Update() override;
+  void Clear(bool) override;
 
-	static bool isValid()
-	{
-		return true;
-	}
-
-	virtual void Update() override;
-
+  static bool isValid() { return true; }
 private:
-	bool AlsaInit();
-	void AlsaShutdown();
+  // maximum number of frames the buffer can hold
+  static constexpr size_t BUFFER_SIZE_MAX = 8192;
 
-	u8 *mix_buffer;
-	std::thread thread;
-	// 0 = continue
-	// 1 = shutdown
-	// 2 = done shutting down.
-	volatile int thread_data;
+  // minimum number of frames to deliver in one transfer
+  static constexpr u32 FRAME_COUNT_MIN = 256;
 
-	snd_pcm_t *handle;
-	int frames_to_deliver;
-#else
-public:
-	AlsaSound(CMixer *mixer) : SoundStream(mixer) {}
+  // number of channels per frame
+  static constexpr u32 CHANNEL_COUNT = 2;
+
+  enum class ALSAThreadStatus
+  {
+    RUNNING,
+    PAUSED,
+    STOPPING,
+    STOPPED,
+  };
+
+  bool AlsaInit();
+  void AlsaShutdown();
+
+  s16 mix_buffer[BUFFER_SIZE_MAX * CHANNEL_COUNT];
+  std::thread thread;
+  std::atomic<ALSAThreadStatus> m_thread_status;
+  std::condition_variable cv;
+  std::mutex cv_m;
+
+  snd_pcm_t* handle;
+  unsigned int frames_to_deliver;
 #endif
 };

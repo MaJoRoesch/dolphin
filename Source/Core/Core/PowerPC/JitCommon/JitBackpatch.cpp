@@ -1,153 +1,124 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #include <cinttypes>
+#include <string>
 
 #include "disasm.h"
 
-#include "Core/PowerPC/JitCommon/JitBackpatch.h"
+#include "Common/Assert.h"
+#include "Common/BitSet.h"
+#include "Common/CommonFuncs.h"
+#include "Common/CommonTypes.h"
+#include "Common/MsgHandler.h"
+#include "Common/x64Emitter.h"
+#include "Core/HW/Memmap.h"
 #include "Core/PowerPC/JitCommon/JitBase.h"
 
 using namespace Gen;
-
-static void BackPatchError(const std::string &text, u8 *codePtr, u32 emAddress)
-{
-	u64 code_addr = (u64)codePtr;
-	disassembler disasm;
-	char disbuf[256];
-	memset(disbuf, 0, 256);
-	disasm.disasm64(0, code_addr, codePtr, disbuf);
-	PanicAlert("%s\n\n"
-		"Error encountered accessing emulated address %08x.\n"
-		"Culprit instruction: \n%s\nat %#" PRIx64,
-		text.c_str(), emAddress, disbuf, code_addr);
-	return;
-}
 
 // This generates some fairly heavy trampolines, but it doesn't really hurt.
 // Only instructions that access I/O will get these, and there won't be that
 // many of them in a typical program/game.
 bool Jitx86Base::HandleFault(uintptr_t access_address, SContext* ctx)
 {
-	// TODO: do we properly handle off-the-end?
-	if (access_address >= (uintptr_t)Memory::base && access_address < (uintptr_t)Memory::base + 0x100010000)
-		return BackPatch((u32)(access_address - (uintptr_t)Memory::base), ctx);
+  // TODO: do we properly handle off-the-end?
+  if (access_address >= (uintptr_t)Memory::physical_base &&
+      access_address < (uintptr_t)Memory::physical_base + 0x100010000)
+    return BackPatch((u32)(access_address - (uintptr_t)Memory::physical_base), ctx);
+  if (access_address >= (uintptr_t)Memory::logical_base &&
+      access_address < (uintptr_t)Memory::logical_base + 0x100010000)
+    return BackPatch((u32)(access_address - (uintptr_t)Memory::logical_base), ctx);
 
-	return false;
+  return false;
 }
 
 bool Jitx86Base::BackPatch(u32 emAddress, SContext* ctx)
 {
-	u8* codePtr = (u8*) ctx->CTX_PC;
+  u8* codePtr = (u8*)ctx->CTX_PC;
 
-	if (!IsInSpace(codePtr))
-		return false;  // this will become a regular crash real soon after this
+  if (!IsInSpace(codePtr))
+    return false;  // this will become a regular crash real soon after this
 
-	InstructionInfo info = {};
+  auto it = backPatchInfo.find(codePtr);
+  if (it == backPatchInfo.end())
+  {
+    PanicAlert("BackPatch: no register use entry for address %p", codePtr);
+    return false;
+  }
 
-	if (!DisassembleMov(codePtr, &info))
-	{
-		BackPatchError("BackPatch - failed to disassemble MOV instruction", codePtr, emAddress);
-		return false;
-	}
+  TrampolineInfo& info = it->second;
 
-	if (info.otherReg != RMEM)
-	{
-		PanicAlert("BackPatch : Base reg not RMEM."
-		           "\n\nAttempted to access %08x.", emAddress);
-		return false;
-	}
+  u8* exceptionHandler = nullptr;
+  if (jit->jo.memcheck)
+  {
+    auto it2 = exceptionHandlerAtLoc.find(codePtr);
+    if (it2 != exceptionHandlerAtLoc.end())
+      exceptionHandler = it2->second;
+  }
 
-	if (info.byteSwap && info.instructionSize < BACKPATCH_SIZE)
-	{
-		PanicAlert("BackPatch: MOVBE is too small");
-		return false;
-	}
+  // In the trampoline code, we jump back into the block at the beginning
+  // of the next instruction. The next instruction comes immediately
+  // after the backpatched operation, or BACKPATCH_SIZE bytes after the start
+  // of the backpatched operation, whichever comes last. (The JIT inserts NOPs
+  // into the original code if necessary to ensure there is enough space
+  // to insert the backpatch jump.)
 
-	auto it = registersInUseAtLoc.find(codePtr);
-	if (it == registersInUseAtLoc.end())
-	{
-		PanicAlert("BackPatch: no register use entry for address %p", codePtr);
-		return false;
-	}
+  jit->js.generatingTrampoline = true;
+  jit->js.trampolineExceptionHandler = exceptionHandler;
 
-	u32 registersInUse = it->second;
+  // Generate the trampoline.
+  const u8* trampoline = trampolines.GenerateTrampoline(info);
+  jit->js.generatingTrampoline = false;
+  jit->js.trampolineExceptionHandler = nullptr;
 
-	if (!info.isMemoryWrite)
-	{
-		XEmitter emitter(codePtr);
-		int bswapNopCount;
-		if (info.byteSwap || info.operandSize == 1)
-			bswapNopCount = 0;
-		// Check the following BSWAP for REX byte
-		else if ((codePtr[info.instructionSize] & 0xF0) == 0x40)
-			bswapNopCount = 3;
-		else
-			bswapNopCount = 2;
+  u8* start = info.start;
 
-		const u8 *trampoline = trampolines.GetReadTrampoline(info, registersInUse);
-		emitter.CALL((void *)trampoline);
-		int padding = info.instructionSize + bswapNopCount - BACKPATCH_SIZE;
-		if (padding > 0)
-		{
-			emitter.NOP(padding);
-		}
-		ctx->CTX_PC = (u64)codePtr;
-	}
-	else
-	{
-		// TODO: special case FIFO writes. Also, support 32-bit mode.
-		it = pcAtLoc.find(codePtr);
-		if (it == pcAtLoc.end())
-		{
-			PanicAlert("BackPatch: no pc entry for address %p", codePtr);
-			return nullptr;
-		}
+  // Patch the original memory operation.
+  XEmitter emitter(start);
+  emitter.JMP(trampoline, true);
+  // NOPs become dead code
+  const u8* end = info.start + info.len;
+  for (const u8* i = emitter.GetCodePtr(); i < end; ++i)
+    emitter.INT3();
 
-		u32 pc = it->second;
+  // Rewind time to just before the start of the write block. If we swapped memory
+  // before faulting (eg: the store+swap was not an atomic op like MOVBE), let's
+  // swap it back so that the swap can happen again (this double swap isn't ideal but
+  // only happens the first time we fault).
+  if (info.nonAtomicSwapStoreSrc != INVALID_REG)
+  {
+    u64* ptr = ContextRN(ctx, info.nonAtomicSwapStoreSrc);
+    switch (info.accessSize << 3)
+    {
+    case 8:
+      // No need to swap a byte
+      break;
+    case 16:
+      *ptr = Common::swap16(static_cast<u16>(*ptr));
+      break;
+    case 32:
+      *ptr = Common::swap32(static_cast<u32>(*ptr));
+      break;
+    case 64:
+      *ptr = Common::swap64(static_cast<u64>(*ptr));
+      break;
+    default:
+      _dbg_assert_(DYNA_REC, 0);
+      break;
+    }
+  }
 
-		u8 *start;
-		if (info.byteSwap || info.hasImmediate)
-		{
-			// The instruction is a MOVBE but it failed so the value is still in little-endian byte order.
-			start = codePtr;
-		}
-		else
-		{
-			// We entered here with a BSWAP-ed register. We'll have to swap it back.
-			u64 *ptr = ContextRN(ctx, info.regOperandReg);
-			int bswapSize = 0;
-			switch (info.operandSize)
-			{
-			case 1:
-				bswapSize = 0;
-				break;
-			case 2:
-				bswapSize = 4 + (info.regOperandReg >= 8 ? 1 : 0);
-				*ptr = Common::swap16((u16) *ptr);
-				break;
-			case 4:
-				bswapSize = 2 + (info.regOperandReg >= 8 ? 1 : 0);
-				*ptr = Common::swap32((u32) *ptr);
-				break;
-			case 8:
-				bswapSize = 3;
-				*ptr = Common::swap64(*ptr);
-				break;
-			}
-			start = codePtr - bswapSize;
-		}
-		XEmitter emitter(start);
-		const u8 *trampoline = trampolines.GetWriteTrampoline(info, registersInUse, pc);
-		emitter.CALL((void *)trampoline);
-		ptrdiff_t padding = (codePtr - emitter.GetCodePtr()) + info.instructionSize;
-		if (padding > 0)
-		{
-			emitter.NOP(padding);
-		}
-		ctx->CTX_PC = (u64)start;
-	}
+  // This is special code to undo the LEA in SafeLoadToReg if it clobbered the address
+  // register in the case where reg_value shared the same location as opAddress.
+  if (info.offsetAddedToAddress)
+  {
+    u64* ptr = ContextRN(ctx, info.op_arg.GetSimpleReg());
+    *ptr -= static_cast<u32>(info.offset);
+  }
 
-	return true;
+  ctx->CTX_PC = reinterpret_cast<u64>(trampoline);
+
+  return true;
 }

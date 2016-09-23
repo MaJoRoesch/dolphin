@@ -1,11 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="DiscScrubber">
       <UniqueIdentifier>{3873659a-9a30-4a58-af9e-8dad7d7eb627}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="FileHandler">
-      <UniqueIdentifier>{324d4b72-d25b-4c83-bd61-6c9e85e59895}</UniqueIdentifier>
     </Filter>
     <Filter Include="FileSystem">
       <UniqueIdentifier>{bd7dbc22-b233-4f82-a369-034f04133b73}</UniqueIdentifier>
@@ -23,15 +20,6 @@
   <ItemGroup>
     <ClCompile Include="DiscScrubber.cpp">
       <Filter>DiscScrubber</Filter>
-    </ClCompile>
-    <ClCompile Include="BannerLoader.cpp">
-      <Filter>FileHandler</Filter>
-    </ClCompile>
-    <ClCompile Include="BannerLoaderGC.cpp">
-      <Filter>FileHandler</Filter>
-    </ClCompile>
-    <ClCompile Include="BannerLoaderWii.cpp">
-      <Filter>FileHandler</Filter>
     </ClCompile>
     <ClCompile Include="Filesystem.cpp">
       <Filter>FileSystem</Filter>
@@ -66,9 +54,6 @@
     <ClCompile Include="FileMonitor.cpp">
       <Filter>Volume</Filter>
     </ClCompile>
-    <ClCompile Include="VolumeCommon.cpp">
-      <Filter>Volume</Filter>
-    </ClCompile>
     <ClCompile Include="VolumeCreator.cpp">
       <Filter>Volume</Filter>
     </ClCompile>
@@ -84,19 +69,16 @@
     <ClCompile Include="VolumeWiiCrypted.cpp">
       <Filter>Volume</Filter>
     </ClCompile>
+    <ClCompile Include="Enums.cpp">
+      <Filter>Volume</Filter>
+    </ClCompile>
+    <ClCompile Include="Volume.cpp">
+      <Filter>Volume</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DiscScrubber.h">
       <Filter>DiscScrubber</Filter>
-    </ClInclude>
-    <ClInclude Include="BannerLoaderWii.h">
-      <Filter>FileHandler</Filter>
-    </ClInclude>
-    <ClInclude Include="BannerLoader.h">
-      <Filter>FileHandler</Filter>
-    </ClInclude>
-    <ClInclude Include="BannerLoaderGC.h">
-      <Filter>FileHandler</Filter>
     </ClInclude>
     <ClInclude Include="Filesystem.h">
       <Filter>FileSystem</Filter>
@@ -147,6 +129,9 @@
       <Filter>Volume</Filter>
     </ClInclude>
     <ClInclude Include="VolumeWiiCrypted.h">
+      <Filter>Volume</Filter>
+    </ClInclude>
+    <ClInclude Include="Enums.h">
       <Filter>Volume</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,7 +1,6 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
-
 
 // Emulator state saving support.
 
@@ -10,17 +9,18 @@
 #include <string>
 #include <vector>
 
+#include "Common/CommonTypes.h"
+
 namespace State
 {
-
 // number of states
 static const u32 NUM_STATES = 10;
 
 struct StateHeader
 {
-	u8 gameID[6];
-	u32 size;
-	double time;
+  char gameID[6];
+  u32 size;
+  double time;
 };
 
 void Init();
@@ -31,18 +31,22 @@ void EnableCompression(bool compression);
 
 bool ReadHeader(const std::string& filename, StateHeader& header);
 
+// Returns a string containing information of the savestate in the given slot
+// which can be presented to the user for identification purposes
+std::string GetInfoStringOfSlot(int slot, bool translate = true);
+
 // These don't happen instantly - they get scheduled as events.
-// ...But only if we're not in the main cpu thread.
-//    If we're in the main cpu thread then they run immediately instead
+// ...But only if we're not in the main CPU thread.
+//    If we're in the main CPU thread then they run immediately instead
 //    because some things (like Lua) need them to run immediately.
 // Slots from 0-99.
 void Save(int slot, bool wait = false);
 void Load(int slot);
 void Verify(int slot);
 
-void SaveAs(const std::string &filename, bool wait = false);
-void LoadAs(const std::string &filename);
-void VerifyAt(const std::string &filename);
+void SaveAs(const std::string& filename, bool wait = false);
+void LoadAs(const std::string& filename);
+void VerifyAt(const std::string& filename);
 
 void SaveToBuffer(std::vector<u8>& buffer);
 void LoadFromBuffer(std::vector<u8>& buffer);
@@ -57,7 +61,6 @@ void UndoLoadState();
 void Flush();
 
 // for calling back into UI code without introducing a dependency on it in core
-typedef void(*CallbackFunc)(void);
+typedef void (*CallbackFunc)(void);
 void SetOnAfterLoadCallback(CallbackFunc callback);
-
 }

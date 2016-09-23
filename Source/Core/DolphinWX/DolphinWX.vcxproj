@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -17,7 +17,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
@@ -40,18 +40,36 @@
       <BaseAddress>0x00400000</BaseAddress>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>true</FixedBaseAddress>
-      <AdditionalLibraryDirectories>$(ExternalsDir)OpenAL\$(PlatformName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>iphlpapi.lib;winmm.lib;setupapi.lib;vfw32.lib;opengl32.lib;glu32.lib;rpcrt4.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ExternalsDir)ffmpeg\lib;$(ExternalsDir)OpenAL\$(PlatformName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>iphlpapi.lib;winmm.lib;setupapi.lib;opengl32.lib;glu32.lib;rpcrt4.lib;comctl32.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/NODEFAULTLIB:libcmt %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">/NODEFAULTLIB:libcmt %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ExternalsDir)wxWidgets3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <ClCompile />
+    <ClCompile />
+    <Manifest>
+      <EnableDpiAwareness>true</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AboutDolphin.cpp" />
     <ClCompile Include="ARCodeAddEdit.cpp" />
-    <ClCompile Include="CheatsWindow.cpp" />
-    <ClCompile Include="ConfigMain.cpp" />
+    <ClCompile Include="Cheats\CheatSearchTab.cpp" />
+    <ClCompile Include="Cheats\CheatsWindow.cpp" />
+    <ClCompile Include="Cheats\CreateCodeDialog.cpp" />
+    <ClCompile Include="Cheats\GeckoCodeDiag.cpp" />
+    <ClCompile Include="Config\AdvancedConfigPane.cpp" />
+    <ClCompile Include="Config\AudioConfigPane.cpp" />
+    <ClCompile Include="Config\ConfigMain.cpp" />
+    <ClCompile Include="Config\GameCubeConfigPane.cpp" />
+    <ClCompile Include="Config\GCAdapterConfigDiag.cpp" />
+    <ClCompile Include="Config\GeneralConfigPane.cpp" />
+    <ClCompile Include="Config\InterfaceConfigPane.cpp" />
+    <ClCompile Include="Config\PathConfigPane.cpp" />
+    <ClCompile Include="Config\WiiConfigPane.cpp" />
     <ClCompile Include="Debugger\BreakpointDlg.cpp" />
     <ClCompile Include="Debugger\BreakpointView.cpp" />
     <ClCompile Include="Debugger\BreakpointWindow.cpp" />
@@ -68,15 +86,17 @@
     <ClCompile Include="Debugger\MemoryWindow.cpp" />
     <ClCompile Include="Debugger\RegisterView.cpp" />
     <ClCompile Include="Debugger\RegisterWindow.cpp" />
+    <ClCompile Include="Debugger\WatchView.cpp" />
+    <ClCompile Include="Debugger\WatchWindow.cpp" />
+    <ClCompile Include="NetPlay\ChangeGameDialog.cpp" />
+    <ClCompile Include="NetPlay\MD5Dialog.cpp" />
+    <ClCompile Include="NetPlay\NetPlaySetupFrame.cpp" />
+    <ClCompile Include="NetPlay\NetWindow.cpp" />
     <ClCompile Include="FifoPlayerDlg.cpp" />
     <ClCompile Include="Frame.cpp" />
     <ClCompile Include="FrameAui.cpp" />
     <ClCompile Include="FrameTools.cpp" />
     <ClCompile Include="GameListCtrl.cpp" />
-    <ClCompile Include="GeckoCodeDiag.cpp" />
-    <ClCompile Include="GLInterface\GLInterface.cpp" />
-    <ClCompile Include="GLInterface\WGL.cpp" />
-    <ClCompile Include="HotkeyDlg.cpp" />
     <ClCompile Include="InputConfigDiag.cpp" />
     <ClCompile Include="InputConfigDiagBitmaps.cpp" />
     <ClCompile Include="ISOFile.cpp" />
@@ -88,22 +108,37 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="MemcardManager.cpp" />
-    <ClCompile Include="NetWindow.cpp" />
+    <ClCompile Include="NetPlay\PadMapDialog.cpp" />
     <ClCompile Include="PatchAddEdit.cpp" />
     <ClCompile Include="SoftwareVideoConfigDialog.cpp" />
     <ClCompile Include="TASInputDlg.cpp" />
     <ClCompile Include="VideoConfigDiag.cpp" />
     <ClCompile Include="PostProcessingConfigDiag.cpp" />
-    <ClCompile Include="WiimoteConfigDiag.cpp" />
+    <ClCompile Include="ControllerConfigDiag.cpp" />
     <ClCompile Include="WXInputBase.cpp" />
     <ClCompile Include="WxUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Config\AdvancedConfigPane.h" />
+    <ClInclude Include="Config\AudioConfigPane.h" />
+    <ClInclude Include="Config\GameCubeConfigPane.h" />
+    <ClInclude Include="Config\GCAdapterConfigDiag.h" />
+    <ClInclude Include="Config\GeneralConfigPane.h" />
+    <ClInclude Include="Config\InterfaceConfigPane.h" />
+    <ClInclude Include="Config\PathConfigPane.h" />
+    <ClInclude Include="Config\WiiConfigPane.h" />
+    <ClInclude Include="NetPlay\ChangeGameDialog.h" />
+    <ClInclude Include="NetPlay\MD5Dialog.h" />
+    <ClInclude Include="NetPlay\NetPlaySetupFrame.h" />
+    <ClInclude Include="NetPlay\PadMapDialog.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="AboutDolphin.h" />
     <ClInclude Include="ARCodeAddEdit.h" />
-    <ClInclude Include="CheatsWindow.h" />
-    <ClInclude Include="ConfigMain.h" />
+    <ClInclude Include="Cheats\CheatSearchTab.h" />
+    <ClInclude Include="Cheats\CheatsWindow.h" />
+    <ClInclude Include="Cheats\CreateCodeDialog.h" />
+    <ClInclude Include="Cheats\GeckoCodeDiag.h" />
+    <ClInclude Include="Config\ConfigMain.h" />
     <ClInclude Include="Debugger\BreakpointDlg.h" />
     <ClInclude Include="Debugger\BreakpointView.h" />
     <ClInclude Include="Debugger\BreakpointWindow.h" />
@@ -119,13 +154,13 @@
     <ClInclude Include="Debugger\MemoryWindow.h" />
     <ClInclude Include="Debugger\RegisterView.h" />
     <ClInclude Include="Debugger\RegisterWindow.h" />
+    <ClInclude Include="Debugger\WatchView.h" />
+    <ClInclude Include="Debugger\WatchWindow.h" />
+    <ClInclude Include="NetPlay\NetWindow.h" />
     <ClInclude Include="FifoPlayerDlg.h" />
     <ClInclude Include="Frame.h" />
     <ClInclude Include="GameListCtrl.h" />
-    <ClInclude Include="GeckoCodeDiag.h" />
-    <ClInclude Include="GLInterface\WGL.h" />
     <ClInclude Include="Globals.h" />
-    <ClInclude Include="HotkeyDlg.h" />
     <ClInclude Include="InputConfigDiag.h" />
     <ClInclude Include="ISOFile.h" />
     <ClInclude Include="ISOProperties.h" />
@@ -133,13 +168,12 @@
     <ClInclude Include="LogWindow.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="MemcardManager.h" />
-    <ClInclude Include="NetWindow.h" />
     <ClInclude Include="PatchAddEdit.h" />
     <ClInclude Include="SoftwareVideoConfigDialog.h" />
     <ClInclude Include="TASInputDlg.h" />
     <ClInclude Include="VideoConfigDiag.h" />
     <ClInclude Include="PostProcessingConfigDiag.h" />
-    <ClInclude Include="WiimoteConfigDiag.h" />
+    <ClInclude Include="ControllerConfigDiag.h" />
     <ClInclude Include="WXInputBase.h" />
     <ClInclude Include="WxUtils.h" />
   </ItemGroup>
@@ -189,7 +223,7 @@
     <ProjectReference Include="$(CoreDir)InputCommon\InputCommon.vcxproj">
       <Project>{6bbd47cf-91fd-4077-b676-8b76980178a9}</Project>
     </ProjectReference>
-	<ProjectReference Include="$(CoreDir)UICommon\UICommon.vcxproj">
+    <ProjectReference Include="$(CoreDir)UICommon\UICommon.vcxproj">
       <Project>{604C8368-F34A-4D55-82C8-CC92A0C13254}</Project>
     </ProjectReference>
     <ProjectReference Include="$(CoreDir)VideoBackends\D3D\D3D.vcxproj">
@@ -201,8 +235,14 @@
     <ProjectReference Include="$(CoreDir)VideoBackends\Software\Software.vcxproj">
       <Project>{a4c423aa-f57c-46c7-a172-d1a777017d29}</Project>
     </ProjectReference>
+    <ProjectReference Include="$(CoreDir)VideoBackends\Null\Null.vcxproj">
+      <Project>{53A5391B-737E-49A8-BC8F-312ADA00736F}</Project>
+    </ProjectReference>
     <ProjectReference Include="$(CoreDir)VideoCommon\VideoCommon.vcxproj">
       <Project>{3de9ee35-3e91-4f27-a014-2866ad8c3fe3}</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(CoreDir)VideoBackends\D3D12\D3D12.vcxproj">
+      <Project>{570215b7-e32f-4438-95ae-c8d955f9fca3}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
@@ -210,18 +250,18 @@
   </ImportGroup>
   <!--Copy Exe, Data directory and DLLs which should be located in the executable directory-->
   <ItemGroup>
-    <DataDirFiles Include="$(DolphinRootDir)Data\**\*.*" />
-    <ExternalDlls Include="$(ExternalsDir)OpenAL\$(PlatformName)\*.dll;$(ExternalsDir)msvcrt\$(PlatformName)\*.dll" />
+    <DataSysFiles Include="$(DolphinRootDir)Data\**\Sys\**\*.*" />
+    <DataTxtFiles Include="$(DolphinRootDir)Data\license.txt" />
+    <ExternalDlls Include="$(ExternalsDir)OpenAL\$(PlatformName)\*.dll" />
     <BinaryFiles Include="$(TargetPath)" />
-    <AllInputFiles Include="@(DataDirFiles);@(ExternalDlls);@(BinaryFiles)" />
+    <AllInputFiles Include="@(DataSysFiles);@(DataTxtFiles);@(ExternalDlls);@(BinaryFiles)" />
   </ItemGroup>
   <Target Name="AfterBuild" Inputs="@(AllInputFiles)" Outputs="@(AllInputFiles -> '$(BinaryOutputDir)%(RecursiveDir)%(Filename)%(Extension)')">
     <Message Text="Copying Data directory..." Importance="High" />
-    <Copy SourceFiles="@(DataDirFiles)" DestinationFolder="$(BinaryOutputDir)%(RecursiveDir)"
-      Condition="!Exists('$(BinaryOutputDir)%(RecursiveDir)%(Filename)%(DataDirFiles.Extension)') OR $([System.DateTime]::Parse('%(ModifiedTime)').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(BinaryOutputDir)%(RecursiveDir)%(Filename)%(DataDirFiles.Extension)').Ticks)" />
+    <Copy SourceFiles="@(DataSysFiles)" DestinationFolder="$(BinaryOutputDir)%(RecursiveDir)" Condition="!Exists('$(BinaryOutputDir)%(RecursiveDir)%(Filename)%(DataSysFiles.Extension)') OR $([System.DateTime]::Parse('%(ModifiedTime)').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(BinaryOutputDir)%(RecursiveDir)%(Filename)%(DataSysFiles.Extension)').Ticks)" />
+    <Copy SourceFiles="@(DataTxtFiles)" DestinationFolder="$(BinaryOutputDir)" Condition="!Exists('$(BinaryOutputDir)%(Filename)%(DataTxtFiles.Extension)') OR $([System.DateTime]::Parse('%(ModifiedTime)').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(BinaryOutputDir)%(RecursiveDir)%(Filename)%(DataTxtFiles.Extension)').Ticks)" />
     <Message Text="Copying External .dlls" Importance="High" />
-    <Copy SourceFiles="@(ExternalDlls)" DestinationFolder="$(BinaryOutputDir)"
-      Condition="!Exists('$(BinaryOutputDir)%(RecursiveDir)%(Filename)%(ExternalDlls.Extension)') OR $([System.DateTime]::Parse('%(ModifiedTime)').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(BinaryOutputDir)%(RecursiveDir)%(Filename)%(ExternalDlls.Extension)').Ticks)" />
+    <Copy SourceFiles="@(ExternalDlls)" DestinationFolder="$(BinaryOutputDir)" Condition="!Exists('$(BinaryOutputDir)%(RecursiveDir)%(Filename)%(ExternalDlls.Extension)') OR $([System.DateTime]::Parse('%(ModifiedTime)').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(BinaryOutputDir)%(RecursiveDir)%(Filename)%(ExternalDlls.Extension)').Ticks)" />
     <Message Text="Copy: @(BinaryFiles) -&gt; $(BinaryOutputDir)" Importance="High" />
     <Copy SourceFiles="@(BinaryFiles)" DestinationFolder="$(BinaryOutputDir)" />
   </Target>

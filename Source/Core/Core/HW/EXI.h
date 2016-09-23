@@ -1,39 +1,45 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
 #include "Common/CommonTypes.h"
-#include "Common/Thread.h"
 
-#include "Core/HW/EXI_Channel.h"
-
+class CEXIChannel;
+class IEXIDevice;
 class PointerWrap;
-namespace MMIO { class Mapping; }
+enum TEXIDevices : int;
+namespace CoreTiming
+{
+enum class FromThread;
+}
+namespace MMIO
+{
+class Mapping;
+}
 
 enum
 {
-	MAX_EXI_CHANNELS = 3
+  MAX_EXI_CHANNELS = 3
 };
 
 namespace ExpansionInterface
 {
-
 void Init();
 void Shutdown();
-void DoState(PointerWrap &p);
+void DoState(PointerWrap& p);
 void PauseAndLock(bool doLock, bool unpauseOnUnlock);
 
 void RegisterMMIO(MMIO::Mapping* mmio, u32 base);
 
 void UpdateInterrupts();
+void ScheduleUpdateInterrupts(CoreTiming::FromThread from, int cycles_late);
 
-void ChangeDeviceCallback(u64 userdata, int cyclesLate);
 void ChangeDevice(const u8 channel, const TEXIDevices device_type, const u8 device_num);
 
 CEXIChannel* GetChannel(u32 index);
 
-IEXIDevice* FindDevice(TEXIDevices device_type, int customIndex=-1);
+IEXIDevice* FindDevice(TEXIDevices device_type, int customIndex = -1);
 
-} // end of namespace ExpansionInterface
+}  // end of namespace ExpansionInterface

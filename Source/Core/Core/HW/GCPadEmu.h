@@ -1,5 +1,5 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2010 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
@@ -11,32 +11,27 @@
 class GCPad : public ControllerEmu
 {
 public:
+  GCPad(const unsigned int index);
+  GCPadStatus GetInput() const;
+  void SetOutput(const ControlState strength);
 
-	GCPad(const unsigned int index);
-	void GetInput(GCPadStatus* const pad);
-	void SetOutput(const u8 on);
-	void SetMotor(const u8 on);
+  bool GetMicButton() const;
 
-	bool GetMicButton() const;
+  std::string GetName() const override;
 
-	std::string GetName() const override;
-
-	void LoadDefaults(const ControllerInterface& ciface) override;
+  void LoadDefaults(const ControllerInterface& ciface) override;
 
 private:
+  Buttons* m_buttons;
+  AnalogStick* m_main_stick;
+  AnalogStick* m_c_stick;
+  Buttons* m_dpad;
+  MixedTriggers* m_triggers;
+  ControlGroup* m_rumble;
+  ControlGroup* m_options;
 
-	Buttons*       m_buttons;
-	AnalogStick*   m_main_stick;
-	AnalogStick*   m_c_stick;
-	Buttons*       m_dpad;
-	MixedTriggers* m_triggers;
-	ControlGroup*  m_rumble;
-	ControlGroup*  m_options;
+  const unsigned int m_index;
 
-	const unsigned int m_index;
-
-	// TODO: Make constexpr when VS supports it.
-	//
-	// Default analog stick radius for GameCube controllers.
-	static const ControlState DEFAULT_PAD_STICK_RADIUS;
+  // Default analog stick radius for GameCube controllers.
+  static constexpr ControlState DEFAULT_PAD_STICK_RADIUS = 1.0;
 };

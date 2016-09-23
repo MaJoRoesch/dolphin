@@ -119,6 +119,12 @@
     <ClCompile Include="VertexLoader.cpp">
       <Filter>Vertex Loading</Filter>
     </ClCompile>
+    <ClCompile Include="VertexLoaderBase.cpp">
+      <Filter>Vertex Loading</Filter>
+    </ClCompile>
+    <ClCompile Include="VertexLoaderX64.cpp">
+      <Filter>Vertex Loading</Filter>
+    </ClCompile>
     <ClCompile Include="VertexLoader_Color.cpp">
       <Filter>Vertex Loading</Filter>
     </ClCompile>
@@ -140,8 +146,20 @@
     <ClCompile Include="TextureDecoder_x64.cpp">
       <Filter>Decoding</Filter>
     </ClCompile>
+    <ClCompile Include="AsyncRequests.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
     <ClCompile Include="BoundingBox.cpp">
       <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="GeometryShaderGen.cpp">
+      <Filter>Shader Generators</Filter>
+    </ClCompile>
+    <ClCompile Include="GeometryShaderManager.cpp">
+      <Filter>Shader Managers</Filter>
+    </ClCompile>
+    <ClCompile Include="LightingShaderGen.cpp">
+      <Filter>Shader Generators</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -156,9 +174,6 @@
       <Filter>Base</Filter>
     </ClInclude>
     <ClInclude Include="FramebufferManagerBase.h">
-      <Filter>Base</Filter>
-    </ClInclude>
-    <ClInclude Include="MainBase.h">
       <Filter>Base</Filter>
     </ClInclude>
     <ClInclude Include="PerfQueryBase.h">
@@ -257,6 +272,9 @@
     <ClInclude Include="VertexLoader.h">
       <Filter>Vertex Loading</Filter>
     </ClInclude>
+    <ClInclude Include="VertexLoaderBase.h">
+      <Filter>Vertex Loading</Filter>
+    </ClInclude>
     <ClInclude Include="VertexLoader_Color.h">
       <Filter>Vertex Loading</Filter>
     </ClInclude>
@@ -272,7 +290,22 @@
     <ClInclude Include="VertexLoaderManager.h">
       <Filter>Vertex Loading</Filter>
     </ClInclude>
+    <ClInclude Include="VertexLoaderUtils.h">
+      <Filter>Vertex Loading</Filter>
+    </ClInclude>
+    <ClInclude Include="AsyncRequests.h">
+      <Filter>Util</Filter>
+    </ClInclude>
     <ClInclude Include="BoundingBox.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="GeometryShaderGen.h">
+      <Filter>Shader Generators</Filter>
+    </ClInclude>
+    <ClInclude Include="GeometryShaderManager.h">
+      <Filter>Shader Managers</Filter>
+    </ClInclude>
+    <ClInclude Include="SamplerCommon.h">
       <Filter>Util</Filter>
     </ClInclude>
   </ItemGroup>

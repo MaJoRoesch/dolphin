@@ -1,7 +1,8 @@
-# Dolphin Code Styling
+# Dolphin Coding Style & Licensing
 
-## Table of Contents
----
+If you make any contributions to Dolphin after December 1st, 2014, you are agreeing that any code you have contributed will be licensed under the GNU GPL version 2 (or any later version).
+
+## Coding Style
 
 - [Introduction] (#introduction)
 - [Styling and formatting] (#styling-and-formatting)
@@ -18,19 +19,43 @@
 
 
 ## Introduction
----
 
 This guide is for developers who wish to contribute to the Dolphin codebase. It will detail how to properly style and format code to fit this project. This guide also offers suggestions on specific functions and other varia that may be used in code.
 
 Following this guide and formatting your code as detailed will likely get your pull request merged much faster than if you don't (assuming the written code has no mistakes in itself).
 
+This project uses clang-format (stable branch) to check for common style issues. In case of conflicts between this guide and clang-format rules, the latter should be followed instead of this guide.
+
+
+### Checking and fixing formatting issues
+
+In most cases, clang-format can and **should** be used to automatically reformat code and solve most formatting issues.
+
+- To run clang-format on all staged files:
+  ```
+  git diff --cached --name-only | egrep '[.](cpp|h|mm)$' | xargs clang-format -i
+  ```
+
+- Formatting issues can be checked for before committing with a lint script that is included with the codebase. To enable it as a pre-commit hook (assuming you are in the repository root):
+  ```
+  ln -s ../../Tools/lint.sh .git/hooks/pre-commit
+  ```
+
+- Alternatively, a custom git filter driver can be used to automatically and transparently reformat any changes:
+  ```
+  git config filter.clang_format.smudge 'cat'
+  git config filter.clang_format.clean 'clang-format %f'
+  echo '/Source/Core/**/*.cpp filter=clang_format' >> .git/info/attributes
+  echo '/Source/Core/**/*.h filter=clang_format' >> .git/info/attributes
+  echo '/Source/Core/**/*.mm filter=clang_format' >> .git/info/attributes
+  ```
+
 ## Styling and formatting
----
 
 ### General
 - Try to limit lines of code to a maximum of 100 characters.
     - Note that this does not mean you should try and use all 100 characters every time you have the chance. Typically with well formatted code, you normally shouldn't hit a line count of anything over 80 or 90 characters.
-- The indentation style we use is tabs for initial indentation and then, if vertical alignment is needed, spaces are to be used.
+- The indentation style we use is 2 spaces per level.
 - The opening brace for namespaces, classes, functions, enums, structs, unions, conditionals, and loops go on the next line.
   - With array initializer lists and lambda expressions it is OK to keep the brace on the same line.
 - References and pointers have the ampersand or asterisk against the type name, not the variable name. Example: `int* var`, not `int *var`.
@@ -40,10 +65,10 @@ Following this guide and formatting your code as detailed will likely get your p
 
     ```c++
     if (condition)
-        return 0;
+      return 0;
 
     while (var != 0)
-        var--;
+      var--;
     ```
   - No:
 
@@ -58,7 +83,7 @@ Following this guide and formatting your code as detailed will likely get your p
   - `class SomeClassName`
   - `enum IPCCommandType`
 - All compile time constants should be fully uppercased. With constants that have more than one word in them, use an underscore to separate them.
-  - `const int PI = 3.14159;`
+  - `const double PI = 3.14159;`
   - `const int MAX_PATH = 260;`
 - All variables should be lowercase with underscores separating the individual words in the name.
   - `int this_variable_name;`
@@ -74,30 +99,30 @@ Following this guide and formatting your code as detailed will likely get your p
     ```c++
     if (condition)
     {
-        // code
+      // code
     }
     else
     {
-        // code
+      // code
     }
     ```
   - Acceptable:
 
     ```c++
     if (condition)
-        // code line
+      // code line
     else
-        // code line
+      // code line
     ```
   - No:
 
     ```c++
     if (condition)
     {
-        // code
+      // code
     }
     else
-        // code line
+      // code line
     ```
 
 
@@ -112,23 +137,22 @@ Following this guide and formatting your code as detailed will likely get your p
 class ExampleClass : public SomeParent
 {
 public:
-    ExampleClass(int x, int y);
-  
-    int GetX() const;
-    int GetY() const;
+  ExampleClass(int x, int y);
+
+  int GetX() const;
+  int GetY() const;
 
 protected:
-    virtual void SomeProtectedFunction() = 0;
-    static float s_some_variable;
+  virtual void SomeProtectedFunction() = 0;
+  static float s_some_variable;
 
 private:
-    int m_x;
-    int m_y;
+  int m_x;
+  int m_y;
 };
 ```
 
 ## Code Specific
----
 
 ### General
 - Using C++11 features is OK and recommended.
@@ -145,9 +169,10 @@ private:
 - If a header is not necessary in a certain source file, remove them.
 - If you find duplicate includes of a certain header, remove it.
 - When declaring includes in a source file, make sure they follow the given pattern:
+  - The header for the source file
   - Standard library headers
   - System-specific headers (these should also likely be in an `#ifdef` block unless the source file itself is system-specific).
-  - Dolphin source file headers
+  - Other Dolphin source file headers
 - Each of the above header sections should also be in alphabetical order
 - Project source file headers should be included in a way that is relative to the `[Dolphin Root]/Source/Core` directory.
 - This project uses `#pragma once` as header guards.
@@ -157,6 +182,13 @@ private:
 - Empty-bodied loops should use braces after their header, not a semicolon.
   - Yes: `while (condition) {}`
   - No: `while (condition);`
+- For do-while loops, place 'while' on the same line as the closing brackets
+
+  ```c++
+  do
+  {
+  } while (false);
+  ```
 
 ### Functions
 - If a function parameter is a pointer or reference and its value or data isn't intended to be changed, please mark that parameter as `const`.
@@ -167,10 +199,10 @@ private:
     template<class T>
     inline void Clamp(T& val, const T& min, const T& max)
     {
-        if (val < min)
-            val = min;
-        else if (val > max)
-            val = max;
+      if (val < min)
+        val = min;
+      else if (val > max)
+        val = max;
     }
     ```
 
@@ -182,10 +214,10 @@ private:
     template<class T>
     inline void Clamp(T* val, const T& min, const T& max)
     {
-        if (*val < min)
-            *val = min;
-        else if (*val > max)
-            *val = max;
+      if (*val < min)
+        *val = min;
+      else if (*val > max)
+        *val = max;
     }
     ```
 
@@ -197,7 +229,7 @@ private:
   class ClassName : ParentClass
   {
   public:
-      void Update() final;
+    void Update() final;
   };
   ```
 
@@ -207,7 +239,7 @@ private:
   class ClassName : ParentClass
   {
   public:
-      void Update() override;
+    void Update() override;
   };
   ```
 
@@ -217,6 +249,10 @@ private:
   ```c++
   class ClassName final : ParentClass
   {
-      // Class definitions
+    // Class definitions
   };
   ```
+
+## Java
+
+The Android project is currently written in Java. If you are using Android Studio to contribute, you can import the project's code style from `code-style-java.jar`, located in `[Dolphin Root]/Source/Android`. Please organize imports before committing.

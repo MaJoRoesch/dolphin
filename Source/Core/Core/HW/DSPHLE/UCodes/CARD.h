@@ -1,5 +1,5 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
@@ -9,11 +9,9 @@
 class CARDUCode : public UCodeInterface
 {
 public:
-	CARDUCode(DSPHLE *dsphle, u32 crc);
-	virtual ~CARDUCode();
-	u32 GetUpdateMs() override;
+  CARDUCode(DSPHLE* dsphle, u32 crc);
+  virtual ~CARDUCode();
 
-	void HandleMail(u32 mail) override;
-	void Update() override;
+  void HandleMail(u32 mail) override;
+  void Update() override;
 };
-

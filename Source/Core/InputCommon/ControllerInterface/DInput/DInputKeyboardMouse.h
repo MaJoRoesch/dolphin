@@ -1,111 +1,102 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2010 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
 #include <windows.h>
 
-#include "InputCommon/ControllerInterface/Device.h"
 #include "InputCommon/ControllerInterface/DInput/DInput8.h"
+#include "InputCommon/ControllerInterface/Device.h"
 
 namespace ciface
 {
 namespace DInput
 {
-
-void InitKeyboardMouse(IDirectInput8* const idi8, std::vector<Core::Device*>& devices, HWND _hwnd);
+void InitKeyboardMouse(IDirectInput8* const idi8, HWND _hwnd);
 
 class KeyboardMouse : public Core::Device
 {
 private:
-	struct State
-	{
-		BYTE          keyboard[256];
-		DIMOUSESTATE2 mouse;
-		struct
-		{
-			float x, y;
-		} cursor;
-	};
+  struct State
+  {
+    BYTE keyboard[256];
+    DIMOUSESTATE2 mouse;
+    struct
+    {
+      ControlState x, y;
+    } cursor;
+  };
 
-	class Key : public Input
-	{
-	public:
-		std::string GetName() const;
-		Key(u8 index, const BYTE& key) : m_index(index), m_key(key) {}
-		ControlState GetState() const;
-	private:
-		const BYTE& m_key;
-		const u8 m_index;
-	};
+  class Key : public Input
+  {
+  public:
+    Key(u8 index, const BYTE& key) : m_key(key), m_index(index) {}
+    std::string GetName() const override;
+    ControlState GetState() const override;
 
-	class Button : public Input
-	{
-	public:
-		std::string GetName() const;
-		Button(u8 index, const BYTE& button) : m_index(index), m_button(button) {}
-		ControlState GetState() const;
-	private:
-		const BYTE& m_button;
-		const u8 m_index;
-	};
+  private:
+    const BYTE& m_key;
+    const u8 m_index;
+  };
 
-	class Axis : public Input
-	{
-	public:
-		std::string GetName() const;
-		Axis(u8 index, const LONG& axis, LONG range) : m_index(index), m_axis(axis), m_range(range) {}
-		ControlState GetState() const;
-	private:
-		const LONG& m_axis;
-		const LONG m_range;
-		const u8 m_index;
-	};
+  class Button : public Input
+  {
+  public:
+    Button(u8 index, const BYTE& button) : m_button(button), m_index(index) {}
+    std::string GetName() const override;
+    ControlState GetState() const override;
 
-	class Cursor : public Input
-	{
-	public:
-		std::string GetName() const;
-		bool IsDetectable() { return false; }
-		Cursor(u8 index, const float& axis, const bool positive) : m_index(index), m_axis(axis), m_positive(positive) {}
-		ControlState GetState() const;
-	private:
-		const float& m_axis;
-		const u8 m_index;
-		const bool m_positive;
-	};
+  private:
+    const BYTE& m_button;
+    const u8 m_index;
+  };
 
-	class Light : public Output
-	{
-	public:
-		std::string GetName() const;
-		Light(u8 index) : m_index(index) {}
-		void SetState(ControlState state);
-	private:
-		const u8 m_index;
-	};
+  class Axis : public Input
+  {
+  public:
+    Axis(u8 index, const LONG& axis, LONG range) : m_axis(axis), m_range(range), m_index(index) {}
+    std::string GetName() const override;
+    ControlState GetState() const override;
+
+  private:
+    const LONG& m_axis;
+    const LONG m_range;
+    const u8 m_index;
+  };
+
+  class Cursor : public Input
+  {
+  public:
+    Cursor(u8 index, const ControlState& axis, const bool positive)
+        : m_axis(axis), m_index(index), m_positive(positive)
+    {
+    }
+    std::string GetName() const override;
+    bool IsDetectable() override { return false; }
+    ControlState GetState() const override;
+
+  private:
+    const ControlState& m_axis;
+    const u8 m_index;
+    const bool m_positive;
+  };
 
 public:
-	bool UpdateInput();
-	bool UpdateOutput();
+  void UpdateInput() override;
 
-	KeyboardMouse(const LPDIRECTINPUTDEVICE8 kb_device, const LPDIRECTINPUTDEVICE8 mo_device);
-	~KeyboardMouse();
+  KeyboardMouse(const LPDIRECTINPUTDEVICE8 kb_device, const LPDIRECTINPUTDEVICE8 mo_device);
+  ~KeyboardMouse();
 
-	std::string GetName() const;
-	int GetId() const;
-	std::string GetSource() const;
+  std::string GetName() const override;
+  std::string GetSource() const override;
 
 private:
-	const LPDIRECTINPUTDEVICE8 m_kb_device;
-	const LPDIRECTINPUTDEVICE8 m_mo_device;
+  const LPDIRECTINPUTDEVICE8 m_kb_device;
+  const LPDIRECTINPUTDEVICE8 m_mo_device;
 
-	DWORD         m_last_update;
-	State         m_state_in;
-	unsigned char m_state_out[3];         // NUM CAPS SCROLL
-	bool          m_current_state_out[3]; // NUM CAPS SCROLL
+  DWORD m_last_update;
+  State m_state_in;
 };
-
 }
 }

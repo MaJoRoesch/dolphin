@@ -1,5 +1,5 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2010 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
@@ -13,81 +13,77 @@ namespace ciface
 {
 namespace OSX
 {
-
 class Joystick : public ForceFeedback::ForceFeedbackDevice
 {
 private:
-	class Button : public Input
-	{
-	public:
-		std::string GetName() const;
-		Button(IOHIDElementRef element, IOHIDDeviceRef device)
-			: m_element(element), m_device(device) {}
-		ControlState GetState() const;
-	private:
-		const IOHIDElementRef m_element;
-		const IOHIDDeviceRef  m_device;
-	};
+  class Button : public Input
+  {
+  public:
+    Button(IOHIDElementRef element, IOHIDDeviceRef device) : m_element(element), m_device(device) {}
+    std::string GetName() const override;
+    ControlState GetState() const override;
 
-	class Axis : public Input
-	{
-	public:
-		enum direction
-		{
-			positive = 0,
-			negative
-		};
-		std::string GetName() const;
-		Axis(IOHIDElementRef element, IOHIDDeviceRef device, direction dir);
-		ControlState GetState() const;
+  private:
+    const IOHIDElementRef m_element;
+    const IOHIDDeviceRef m_device;
+  };
 
-	private:
-		const IOHIDElementRef m_element;
-		const IOHIDDeviceRef  m_device;
-		std::string           m_name;
-		const direction       m_direction;
-		float                 m_neutral;
-		float                 m_scale;
-	};
+  class Axis : public Input
+  {
+  public:
+    enum direction
+    {
+      positive = 0,
+      negative
+    };
 
-	class Hat : public Input
-	{
-	public:
-		enum direction
-		{
-			up = 0,
-			right,
-			down,
-			left
-		};
-		std::string GetName() const;
-		Hat(IOHIDElementRef element, IOHIDDeviceRef device, direction dir);
-		ControlState GetState() const;
+    Axis(IOHIDElementRef element, IOHIDDeviceRef device, direction dir);
+    std::string GetName() const override;
+    ControlState GetState() const override;
 
-	private:
-		const IOHIDElementRef m_element;
-		const IOHIDDeviceRef  m_device;
-		const char*           m_name;
-		const direction       m_direction;
-	};
+  private:
+    const IOHIDElementRef m_element;
+    const IOHIDDeviceRef m_device;
+    std::string m_name;
+    const direction m_direction;
+    float m_neutral;
+    float m_scale;
+  };
+
+  class Hat : public Input
+  {
+  public:
+    enum direction
+    {
+      up = 0,
+      right,
+      down,
+      left
+    };
+
+    Hat(IOHIDElementRef element, IOHIDDeviceRef device, direction dir);
+    std::string GetName() const override;
+    ControlState GetState() const override;
+
+  private:
+    const IOHIDElementRef m_element;
+    const IOHIDDeviceRef m_device;
+    const char* m_name;
+    const direction m_direction;
+  };
 
 public:
-	bool UpdateInput();
+  Joystick(IOHIDDeviceRef device, std::string name);
+  ~Joystick();
 
-	Joystick(IOHIDDeviceRef device, std::string name, int index);
-	~Joystick();
-
-	std::string GetName() const;
-	std::string GetSource() const;
-	int GetId() const;
+  std::string GetName() const override;
+  std::string GetSource() const override;
 
 private:
-	const IOHIDDeviceRef m_device;
-	const std::string    m_device_name;
-	const int            m_index;
+  const IOHIDDeviceRef m_device;
+  const std::string m_device_name;
 
-	ForceFeedback::FFDeviceAdapterReference m_ff_device;
+  ForceFeedback::FFDeviceAdapterReference m_ff_device;
 };
-
 }
 }

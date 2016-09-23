@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -16,7 +16,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
@@ -52,6 +52,13 @@
     <ClCompile Include="ControllerInterface\ExpressionParser.cpp" />
     <ClCompile Include="ControllerInterface\ForceFeedback\ForceFeedbackDevice.cpp" />
     <ClCompile Include="ControllerInterface\XInput\XInput.cpp" />
+    <ClCompile Include="GCAdapter.cpp">
+      <!--
+      Disable "nonstandard extension used : zero-sized array in struct/union" warning,
+      which is hit in libusb.h.
+      -->
+      <DisableSpecificWarnings>4200;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
     <ClCompile Include="InputConfig.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -66,6 +73,7 @@
     <ClInclude Include="ControllerInterface\ExpressionParser.h" />
     <ClInclude Include="ControllerInterface\ForceFeedback\ForceFeedbackDevice.h" />
     <ClInclude Include="ControllerInterface\XInput\XInput.h" />
+    <ClInclude Include="GCAdapter.h" />
     <ClInclude Include="GCPadStatus.h" />
     <ClInclude Include="InputConfig.h" />
   </ItemGroup>

@@ -1,5 +1,5 @@
-// Copyright 2014 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
@@ -8,7 +8,6 @@
 
 namespace SystemTimers
 {
-
 /*
 GameCube                   MHz
 flipper <-> ARAM bus:      81 (DSP)
@@ -31,7 +30,7 @@ broadway:                       729
 
 enum
 {
-	TIMER_RATIO = 12
+  TIMER_RATIO = 12
 };
 
 u32 GetTicksPerSecond();
@@ -45,5 +44,6 @@ u32 GetFakeDecrementer();
 
 void TimeBaseSet();
 u64 GetFakeTimeBase();
-
+// Custom RTC
+s64 GetLocalTimeRTCOffset();
 }

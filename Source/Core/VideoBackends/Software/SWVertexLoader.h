@@ -1,60 +1,43 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2009 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
+#include <vector>
+
 #include "Common/CommonTypes.h"
 
-#include "VideoBackends/Software/CPMemLoader.h"
 #include "VideoBackends/Software/NativeVertexFormat.h"
+#include "VideoBackends/Software/SetupUnit.h"
 
-class PointerWrap;
-class SetupUnit;
+#include "VideoCommon/VertexLoaderBase.h"
+#include "VideoCommon/VertexManagerBase.h"
 
-class SWVertexLoader
+class SWVertexLoader : public VertexManagerBase
 {
-	u32 m_VertexSize;
+public:
+  SWVertexLoader();
+  ~SWVertexLoader();
 
-	VAT* m_CurrentVat;
+  NativeVertexFormat* CreateNativeVertexFormat(const PortableVertexDeclaration& vdec) override;
 
-	TPipelineFunction m_positionLoader;
-	TPipelineFunction m_normalLoader;
-	TPipelineFunction m_colorLoader[2];
-	TPipelineFunction m_texCoordLoader[8];
+protected:
+  void ResetBuffer(u32 stride) override;
+  u16* GetIndexBuffer() { return &LocalIBuffer[0]; }
+private:
+  void vFlush(bool useDstAlpha) override;
+  std::vector<u8> LocalVBuffer;
+  std::vector<u16> LocalIBuffer;
 
-	InputVertexData m_Vertex;
+  InputVertexData m_Vertex;
 
-	typedef void (*AttributeLoader)(SWVertexLoader*, InputVertexData*, u8);
-	struct AttrLoaderCall
-	{
-		AttributeLoader loader;
-		u8 index;
-	};
-	AttrLoaderCall m_AttributeLoaders[1+8+1+1+2+8];
-	int m_NumAttributeLoaders;
-	void AddAttributeLoader(AttributeLoader loader, u8 index=0);
+  void ParseVertex(const PortableVertexDeclaration& vdec, int index);
 
-	// attribute loader functions
-	static void LoadPosMtx(SWVertexLoader *vertexLoader, InputVertexData *vertex, u8 unused);
-	static void LoadTexMtx(SWVertexLoader *vertexLoader, InputVertexData *vertex, u8 index);
-	static void LoadPosition(SWVertexLoader *vertexLoader, InputVertexData *vertex, u8 unused);
-	static void LoadNormal(SWVertexLoader *vertexLoader, InputVertexData *vertex, u8 unused);
-	static void LoadColor(SWVertexLoader *vertexLoader, InputVertexData *vertex, u8 index);
-	static void LoadTexCoord(SWVertexLoader *vertexLoader, InputVertexData *vertex, u8 index);
+  SetupUnit m_SetupUnit;
 
-	SetupUnit *m_SetupUnit;
-
-	bool m_TexGenSpecialCase;
+  bool m_TexGenSpecialCase;
 
 public:
-	SWVertexLoader();
-	~SWVertexLoader();
-
-	void SetFormat(u8 attributeIndex, u8 primitiveType);
-
-	u32 GetVertexSize() { return m_VertexSize; }
-
-	void LoadVertex();
-	void DoState(PointerWrap &p);
+  void SetFormat(u8 attributeIndex, u8 primitiveType);
 };

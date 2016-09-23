@@ -6,10 +6,10 @@ set(SRCS	AudioCommon.cpp
 
 set(LIBS "")
 
-if(ANDROID)
+if(OPENSLES_FOUND)
 	set(SRCS ${SRCS} OpenSLESStream.cpp)
-	set(LIBS ${LIBS} OpenSLES)
-endif(ANDROID)
+	set(LIBS ${LIBS} ${OPENSLES_LIBRARIES})
+endif(OPENSLES_FOUND)
 
 if(ALSA_FOUND)
 	set(SRCS ${SRCS} AlsaSoundStream.cpp)
@@ -33,9 +33,7 @@ endif(PULSEAUDIO_FOUND)
 
 if(WIN32)
 	set(SRCS ${SRCS} XAudio2Stream.cpp)
-endif(WIN32)
-
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+elseif(APPLE)
 	set(SRCS ${SRCS} CoreAudioSoundStream.cpp)
 endif()
 

@@ -1,102 +1,59 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #include <algorithm>
-#include <cstring>
+#include <functional>
 
 #include "Common/CommonPaths.h"
 #include "Common/FileSearch.h"
-#include "Common/StringUtil.h"
+#include "Common/FileUtil.h"
 
-#ifndef _WIN32
-#include <dirent.h>
-#else
-#include <windows.h>
-#endif
-
-
-CFileSearch::CFileSearch(const CFileSearch::XStringVector& _rSearchStrings, const CFileSearch::XStringVector& _rDirectories)
+static std::vector<std::string>
+FileSearchWithTest(const std::vector<std::string>& directories, bool recursive,
+                   std::function<bool(const File::FSTEntry&)> callback)
 {
-	// Reverse the loop order for speed?
-	for (auto& _rSearchString : _rSearchStrings)
-	{
-		for (auto& _rDirectory : _rDirectories)
-		{
-			FindFiles(_rSearchString, _rDirectory);
-		}
-	}
+  std::vector<std::string> result;
+  for (const std::string& directory : directories)
+  {
+    File::FSTEntry top = File::ScanDirectoryTree(directory, recursive);
+
+    std::function<void(File::FSTEntry&)> DoEntry;
+    DoEntry = [&](File::FSTEntry& entry) {
+      if (callback(entry))
+        result.push_back(entry.physicalName);
+      for (auto& child : entry.children)
+        DoEntry(child);
+    };
+    for (auto& child : top.children)
+      DoEntry(child);
+  }
+  // remove duplicates
+  std::sort(result.begin(), result.end());
+  result.erase(std::unique(result.begin(), result.end()), result.end());
+  return result;
 }
 
-
-void CFileSearch::FindFiles(const std::string& _searchString, const std::string& _strPath)
+std::vector<std::string> DoFileSearch(const std::vector<std::string>& exts,
+                                      const std::vector<std::string>& directories, bool recursive)
 {
-	std::string GCMSearchPath;
-	BuildCompleteFilename(GCMSearchPath, _strPath, _searchString);
-#ifdef _WIN32
-	WIN32_FIND_DATA findData;
-	HANDLE FindFirst = FindFirstFile(UTF8ToTStr(GCMSearchPath).c_str(), &findData);
-
-	if (FindFirst != INVALID_HANDLE_VALUE)
-	{
-		bool bkeepLooping = true;
-
-		while (bkeepLooping)
-		{
-			if (findData.cFileName[0] != '.')
-			{
-				std::string strFilename;
-				BuildCompleteFilename(strFilename, _strPath, TStrToUTF8(findData.cFileName));
-				m_FileNames.push_back(strFilename);
-			}
-
-			bkeepLooping = FindNextFile(FindFirst, &findData) ? true : false;
-		}
-	}
-	FindClose(FindFirst);
-
-
-#else
-	// TODO: super lame/broken
-
-	auto end_match(_searchString);
-
-	// assuming we have a "*.blah"-like pattern
-	if (!end_match.empty() && end_match[0] == '*')
-		end_match.erase(0, 1);
-
-	// ugly
-	if (end_match == ".*")
-		end_match.clear();
-
-	DIR* dir = opendir(_strPath.c_str());
-
-	if (!dir)
-		return;
-
-	while (auto const dp = readdir(dir))
-	{
-		std::string found(dp->d_name);
-
-		if ((found != ".") && (found != "..") &&
-		    (found.size() >= end_match.size()) &&
-		    std::equal(end_match.rbegin(), end_match.rend(), found.rbegin()))
-		{
-			std::string full_name;
-			if (_strPath.c_str()[_strPath.size()-1] == DIR_SEP_CHR)
-				full_name = _strPath + found;
-			else
-				full_name = _strPath + DIR_SEP + found;
-
-			m_FileNames.push_back(full_name);
-		}
-	}
-
-	closedir(dir);
-#endif
+  bool accept_all = std::find(exts.begin(), exts.end(), "") != exts.end();
+  return FileSearchWithTest(directories, recursive, [&](const File::FSTEntry& entry) {
+    if (accept_all)
+      return true;
+    std::string name = entry.virtualName;
+    std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+    return std::any_of(exts.begin(), exts.end(), [&](const std::string& ext) {
+      return name.length() >= ext.length() &&
+             name.compare(name.length() - ext.length(), ext.length(), ext) == 0;
+    });
+  });
 }
 
-const CFileSearch::XStringVector& CFileSearch::GetFileNames() const
+// Result includes the passed directories themselves as well as their subdirectories.
+std::vector<std::string> FindSubdirectories(const std::vector<std::string>& directories,
+                                            bool recursive)
 {
-	return m_FileNames;
+  return FileSearchWithTest(directories, true,
+                            [&](const File::FSTEntry& entry) { return entry.isDirectory; });
 }

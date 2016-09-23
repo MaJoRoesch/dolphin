@@ -1,36 +1,32 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #include "DiscIO/Filesystem.h"
+#include <memory>
 #include "DiscIO/FileSystemGCWii.h"
 
 namespace DiscIO
 {
-
-IFileSystem::IFileSystem(const IVolume *_rVolume)
-	: m_rVolume(_rVolume)
-{}
-
-
-IFileSystem::~IFileSystem()
-{}
-
-
-IFileSystem* CreateFileSystem(const IVolume* _rVolume)
+IFileSystem::IFileSystem(const IVolume* _rVolume) : m_rVolume(_rVolume)
 {
-	IFileSystem* pFileSystem = new CFileSystemGCWii(_rVolume);
-
-	if (!pFileSystem)
-		return nullptr;
-
-	if (!pFileSystem->IsValid())
-	{
-		delete pFileSystem;
-		pFileSystem = nullptr;
-	}
-
-	return pFileSystem;
 }
 
-} // namespace
+IFileSystem::~IFileSystem()
+{
+}
+
+std::unique_ptr<IFileSystem> CreateFileSystem(const IVolume* volume)
+{
+  std::unique_ptr<IFileSystem> filesystem = std::make_unique<CFileSystemGCWii>(volume);
+
+  if (!filesystem)
+    return nullptr;
+
+  if (!filesystem->IsValid())
+    filesystem.reset();
+
+  return filesystem;
+}
+
+}  // namespace

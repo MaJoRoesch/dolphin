@@ -1,10 +1,11 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2009 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
-#include "Core/DSP/DSPInterpreter.h"
+#include <array>
+#include "Common/CommonTypes.h"
 
 // Basic code analysis.
 namespace DSPAnalyzer
@@ -16,18 +17,18 @@ namespace DSPAnalyzer
 
 enum
 {
-	CODE_START_OF_INST = 1,
-	CODE_IDLE_SKIP     = 2,
-	CODE_LOOP_START    = 4,
-	CODE_LOOP_END      = 8,
-	CODE_UPDATE_SR     = 16,
-	CODE_CHECK_INT     = 32,
+  CODE_START_OF_INST = 1,
+  CODE_IDLE_SKIP = 2,
+  CODE_LOOP_START = 4,
+  CODE_LOOP_END = 8,
+  CODE_UPDATE_SR = 16,
+  CODE_CHECK_INT = 32,
 };
 
 // Easy to query array covering the whole of instruction memory.
 // Just index by address.
 // This one will be helpful for debuggers and jits.
-extern u8 code_flags[ISPACE];
+extern std::array<u8, ISPACE> code_flags;
 
 // This one should be called every time IRAM changes - which is basically
 // every time that a new ucode gets uploaded, and never else. At that point,

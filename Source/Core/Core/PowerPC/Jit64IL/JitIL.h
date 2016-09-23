@@ -1,5 +1,5 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 // ========================
@@ -16,96 +16,66 @@
 
 #pragma once
 
+#include "Common/CommonTypes.h"
 #include "Common/x64ABI.h"
-#include "Common/x64Analyzer.h"
 #include "Common/x64Emitter.h"
-
-#include "Core/ConfigManager.h"
-#include "Core/Core.h"
-#include "Core/CoreTiming.h"
-#include "Core/HW/GPFifo.h"
-#include "Core/HW/Memmap.h"
-#include "Core/PowerPC/PowerPC.h"
-#include "Core/PowerPC/PPCAnalyst.h"
-#include "Core/PowerPC/PPCTables.h"
+#include "Core/PowerPC/Gekko.h"
 #include "Core/PowerPC/Jit64/JitAsm.h"
-#include "Core/PowerPC/JitCommon/Jit_Util.h"
-#include "Core/PowerPC/JitCommon/JitBackpatch.h"
 #include "Core/PowerPC/JitCommon/JitBase.h"
 #include "Core/PowerPC/JitCommon/JitCache.h"
-#include "Core/PowerPC/JitILCommon/IR.h"
 #include "Core/PowerPC/JitILCommon/JitILBase.h"
+#include "Core/PowerPC/PPCAnalyst.h"
 
 class JitIL : public JitILBase
 {
 public:
-	Jit64AsmRoutineManager asm_routines;
+  Jit64AsmRoutineManager asm_routines;
 
-	JitIL() {}
-	~JitIL() {}
+  JitIL() {}
+  ~JitIL() {}
+  // Initialization, etc
 
-	// Initialization, etc
+  void Init() override;
 
-	void Init() override;
-	void Shutdown() override;
+  void EnableBlockLink();
 
-	// Jit!
+  void Shutdown() override;
 
-	void Jit(u32 em_address) override;
-	const u8* DoJit(u32 em_address, PPCAnalyst::CodeBuffer *code_buffer, JitBlock *b);
+  // Jit!
 
-	void Trace();
+  void Jit(u32 em_address) override;
+  const u8* DoJit(u32 em_address, PPCAnalyst::CodeBuffer* code_buf, JitBlock* b, u32 nextPC);
 
-	JitBlockCache *GetBlockCache() override { return &blocks; }
+  void Trace();
 
-	void ClearCache() override;
-	const u8 *GetDispatcher()
-	{
-		return asm_routines.dispatcher;  // asm_routines.dispatcher
-	}
+  JitBlockCache* GetBlockCache() override { return &blocks; }
+  void ClearCache() override;
 
-	const CommonAsmRoutines *GetAsmRoutines() override
-	{
-		return &asm_routines;
-	}
+  const CommonAsmRoutines* GetAsmRoutines() override { return &asm_routines; }
+  const char* GetName() override { return "JIT64IL"; }
+  // Run!
+  void Run() override;
+  void SingleStep() override;
 
-	const char *GetName() override
-	{
-		return "JIT64IL";
-	}
+  // Utilities for use by opcodes
 
-	// Run!
-	void Run() override;
-	void SingleStep() override;
+  void WriteExit(u32 destination);
+  void WriteExitDestInOpArg(const Gen::OpArg& arg);
+  void WriteExceptionExit();
+  void WriteRfiExitDestInOpArg(const Gen::OpArg& arg);
+  void Cleanup();
 
-	// Utilities for use by opcodes
+  void WriteCode(u32 exitAddress);
 
-	void WriteExit(u32 destination);
-	void WriteExitDestInOpArg(const Gen::OpArg& arg);
-	void WriteExceptionExit();
-	void WriteRfiExitDestInOpArg(const Gen::OpArg& arg);
-	void WriteCallInterpreter(UGeckoInstruction _inst);
-	void Cleanup();
+  // OPCODES
+  using Instruction = void (JitIL::*)(UGeckoInstruction instCode);
+  void FallBackToInterpreter(UGeckoInstruction _inst) override;
+  void DoNothing(UGeckoInstruction _inst) override;
+  void HLEFunction(UGeckoInstruction _inst) override;
 
-	void GenerateCarry(Gen::X64Reg temp_reg);
-
-	void tri_op(int d, int a, int b, bool reversible, void (Gen::XEmitter::*op)(Gen::X64Reg, Gen::OpArg));
-	typedef u32 (*Operation)(u32 a, u32 b);
-	void regimmop(int d, int a, bool binary, u32 value, Operation doop, void (Gen::XEmitter::*op)(int, const Gen::OpArg&, const Gen::OpArg&), bool Rc = false, bool carry = false);
-	void fp_tri_op(int d, int a, int b, bool reversible, bool dupe, void (Gen::XEmitter::*op)(Gen::X64Reg, Gen::OpArg));
-
-	void WriteCode(u32 exitAddress);
-
-	// OPCODES
-	void unknown_instruction(UGeckoInstruction _inst) override;
-	void FallBackToInterpreter(UGeckoInstruction _inst) override;
-	void DoNothing(UGeckoInstruction _inst) override;
-	void HLEFunction(UGeckoInstruction _inst) override;
-
-	void DynaRunTable4(UGeckoInstruction _inst) override;
-	void DynaRunTable19(UGeckoInstruction _inst) override;
-	void DynaRunTable31(UGeckoInstruction _inst) override;
-	void DynaRunTable59(UGeckoInstruction _inst) override;
-	void DynaRunTable63(UGeckoInstruction _inst) override;
-
+  void DynaRunTable4(UGeckoInstruction _inst) override;
+  void DynaRunTable19(UGeckoInstruction _inst) override;
+  void DynaRunTable31(UGeckoInstruction _inst) override;
+  void DynaRunTable59(UGeckoInstruction _inst) override;
+  void DynaRunTable63(UGeckoInstruction _inst) override;
 };

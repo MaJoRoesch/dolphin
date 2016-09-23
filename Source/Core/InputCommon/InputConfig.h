@@ -1,36 +1,44 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2010 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
-#include <map>
+#include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
-#include "Common/FileUtil.h"
-#include "Common/IniFile.h"
-#include "Common/Thread.h"
-
-#include "InputCommon/ControllerEmu.h"
-#include "InputCommon/ControllerInterface/ControllerInterface.h"
+class ControllerEmu;
 
 class InputConfig
 {
 public:
-	InputConfig(const char* const _ini_name, const char* const _gui_name,
-		const char* const _profile_name)
-		: ini_name(_ini_name), gui_name(_gui_name), profile_name(_profile_name) {}
+  InputConfig(const std::string& ini_name, const std::string& gui_name,
+              const std::string& profile_name)
+      : m_ini_name(ini_name), m_gui_name(gui_name), m_profile_name(profile_name)
+  {
+  }
 
-	~InputConfig();
+  bool LoadConfig(bool isGC);
+  void SaveConfig();
 
-	bool LoadConfig(bool isGC);
-	void SaveConfig();
+  template <typename T, typename... Args>
+  void CreateController(Args&&... args)
+  {
+    m_controllers.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
+  }
 
-	std::vector<ControllerEmu*>  controllers;
+  ControllerEmu* GetController(int index);
+  void ClearControllers();
+  bool ControllersNeedToBeCreated() const;
+  bool IsControllerControlledByGamepadDevice(int index) const;
 
-	std::recursive_mutex controls_lock; // for changing any control references
-
-	const char* const ini_name;
-	const char* const gui_name;
-	const char* const profile_name;
+  std::string GetGUIName() const { return m_gui_name; }
+  std::string GetProfileName() const { return m_profile_name; }
+private:
+  std::vector<std::unique_ptr<ControllerEmu>> m_controllers;
+  const std::string m_ini_name;
+  const std::string m_gui_name;
+  const std::string m_profile_name;
 };

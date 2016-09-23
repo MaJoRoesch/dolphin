@@ -1,31 +1,26 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
 
 #pragma once
 
-#include <cstdlib>
+#include <array>
 #include "AudioCommon/SoundStream.h"
-
-#define BUF_SIZE (48000 * 4 / 32)
 
 class NullSound final : public SoundStream
 {
-	// playback position
-	short realtimeBuffer[BUF_SIZE / sizeof(short)];
-
 public:
-	NullSound(CMixer *mixer)
-		: SoundStream(mixer)
-	{}
+  bool Start() override;
+  void SoundLoop() override;
+  void SetVolume(int volume) override;
+  void Stop() override;
+  void Clear(bool mute) override;
+  void Update() override;
 
-	virtual ~NullSound() {}
+  static bool isValid() { return true; }
+private:
+  static constexpr size_t BUFFER_SIZE = 48000 * 4 / 32;
 
-	virtual bool Start() override;
-	virtual void SoundLoop() override;
-	virtual void SetVolume(int volume) override;
-	virtual void Stop() override;
-	virtual void Clear(bool mute) override;
-	static bool isValid() { return true; }
-	virtual void Update() override;
+  // Playback position
+  std::array<short, BUFFER_SIZE / sizeof(short)> m_realtime_buffer;
 };

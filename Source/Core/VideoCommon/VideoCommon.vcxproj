@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -16,7 +16,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
@@ -34,7 +34,28 @@
     <Import Project="..\..\VSProps\PCHUse.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ExternalsDir)ffmpeg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ExternalsDir)ffmpeg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AsyncRequests.cpp" />
     <ClCompile Include="AVIDump.cpp" />
     <ClCompile Include="BoundingBox.cpp" />
     <ClCompile Include="BPFunctions.cpp" />
@@ -59,10 +80,15 @@
     <ClCompile Include="PixelShaderManager.cpp" />
     <ClCompile Include="PostProcessing.cpp" />
     <ClCompile Include="RenderBase.cpp" />
+    <ClCompile Include="LightingShaderGen.cpp" />
     <ClCompile Include="Statistics.cpp" />
+    <ClCompile Include="GeometryShaderGen.cpp" />
+    <ClCompile Include="GeometryShaderManager.cpp" />
     <ClCompile Include="TextureCacheBase.cpp" />
     <ClCompile Include="TextureConversionShader.cpp" />
     <ClCompile Include="VertexLoader.cpp" />
+    <ClCompile Include="VertexLoaderBase.cpp" />
+    <ClCompile Include="VertexLoaderX64.cpp" />
     <ClCompile Include="VertexLoaderManager.cpp" />
     <ClCompile Include="VertexLoader_Color.cpp" />
     <ClCompile Include="VertexLoader_Normal.cpp" />
@@ -80,6 +106,7 @@
     <ClCompile Include="XFStructs.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AsyncRequests.h" />
     <ClInclude Include="AVIDump.h" />
     <ClInclude Include="BoundingBox.h" />
     <ClInclude Include="BPFunctions.h" />
@@ -98,7 +125,6 @@
     <ClInclude Include="IndexGenerator.h" />
     <ClInclude Include="LightingShaderGen.h" />
     <ClInclude Include="LookUpTables.h" />
-    <ClInclude Include="MainBase.h" />
     <ClInclude Include="NativeVertexFormat.h" />
     <ClInclude Include="OnScreenDisplay.h" />
     <ClInclude Include="OpcodeDecoding.h" />
@@ -108,13 +134,18 @@
     <ClInclude Include="PixelShaderManager.h" />
     <ClInclude Include="PostProcessing.h" />
     <ClInclude Include="RenderBase.h" />
+    <ClInclude Include="SamplerCommon.h" />
     <ClInclude Include="ShaderGenCommon.h" />
     <ClInclude Include="Statistics.h" />
+    <ClInclude Include="GeometryShaderGen.h" />
+    <ClInclude Include="GeometryShaderManager.h" />
     <ClInclude Include="TextureCacheBase.h" />
     <ClInclude Include="TextureConversionShader.h" />
     <ClInclude Include="TextureDecoder.h" />
     <ClInclude Include="VertexLoader.h" />
+    <ClInclude Include="VertexLoaderBase.h" />
     <ClInclude Include="VertexLoaderManager.h" />
+    <ClInclude Include="VertexLoaderUtils.h" />
     <ClInclude Include="VertexLoader_Color.h" />
     <ClInclude Include="VertexLoader_Normal.h" />
     <ClInclude Include="VertexLoader_Position.h" />
@@ -138,6 +169,9 @@
     </ProjectReference>
     <ProjectReference Include="$(ExternalsDir)SOIL\SOIL.vcxproj">
       <Project>{b441cc62-877e-4b3f-93e0-0de80544f705}</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(ExternalsDir)xxhash\xxhash.vcxproj">
+      <Project>{677EA016-1182-440C-9345-DC88D1E98C0C}</Project>
     </ProjectReference>
     <ProjectReference Include="$(ExternalsDir)zlib\zlib.vcxproj">
       <Project>{ff213b23-2c26-4214-9f88-85271e557e87}</Project>

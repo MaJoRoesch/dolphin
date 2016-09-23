@@ -1,24 +1,25 @@
-// Copyright 2013 Dolphin Emulator Project
-// Licensed under GPLv2
+// Copyright 2008 Dolphin Emulator Project
+// Licensed under GPLv2+
 // Refer to the license.txt file included.
-
-#include "Common/CommonTypes.h"
-#include "InputCommon/GCPadStatus.h"
-#include "InputCommon/InputConfig.h"
 
 #pragma once
 
+#include "Common/CommonTypes.h"
+#include "InputCommon/ControllerInterface/Device.h"
+
+class InputConfig;
+struct GCPadStatus;
+
 namespace Pad
 {
-
 void Shutdown();
 void Initialize(void* const hwnd);
+void LoadConfig();
 
 InputConfig* GetConfig();
 
-void GetStatus(u8 _numPAD, GCPadStatus* _pPADStatus);
-void Rumble(u8 _numPAD, unsigned int _uType, unsigned int _uStrength);
-void Motor(u8 _numPAD, unsigned int _uType, unsigned int _uStrength);
+GCPadStatus GetStatus(u8 pad_num);
+void Rumble(u8 pad_num, ControlState strength);
 
-bool GetMicButton(u8 pad);
+bool GetMicButton(u8 pad_num);
 }
